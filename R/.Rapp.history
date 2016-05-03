@@ -1,2 +1,0 @@
-install.packages("~/Google Drive/Rappaport Lab Share/R-tools/package_binaries/MetMSLine_0.0.0.9002.tar.gz", repos = NULL, type = "source")
-xvfb-run R --no-save

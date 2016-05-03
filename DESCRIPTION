@@ -3,7 +3,7 @@ Title: Simultaneous peak-picking and MS2 target identification using XCMS.
 Version: 0.0.10
 Author: Will Edmands <edmandsw@berkeley.edu>
 Description: Performs simultaneous raw data to mzXML conversion (MSconvert),
-    pick-picking, statistics, visualization and possible MS2 target list
+    peak-picking, statistics, visualization and possible MS2 target list
     determination during an MS1 metabolomic profiling experiment.
 Depends:
     R (>= 3.2.0),
