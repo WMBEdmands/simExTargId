@@ -1,0 +1,86 @@
+---
+title: "simExTargId (simultaneous experiment - MS/MS target identification)"
+author: "WMB Edmands"
+date: '`r format(Sys.Date(), "%B %e, %Y")`'
+output: pdf_document
+---
+
+The following illustrates the simExTargId works with example (.RAW) data files
+obtained on a Thermo FT-ICR-MS:
+
+Create a dummy raw data directory on your computer's hard drive, move
+half the example data, to initiate the process then move the second half to 
+simulate the actual real-time collection of LC-MS data.
+
+```{r, include=F}
+library(simExTargId)
+```
+```{r, collapse=TRUE}
+# set your working directory to where example directories can be created and results
+# output saved
+# For example
+setwd("C:/")
+# create a dummy raw MS1 profiling data directory and analysis directory 
+# for example
+todaysDate <- gsub(" ", "", format(Sys.time(), "%Y %m %d"))
+dummyRawDir <- paste0(getwd(), "/", todaysDate, "_simExTargId_Example")
+# create directory
+dir.create(dummyRawDir)
+# analysis directory where all simExTargId output will be stored
+dummyAnalysisDir <- paste0(dummyRawDir, "_analysis")
+# create directory
+dir.create(dummyAnalysisDir)
+
+# simExTargId external directory
+extdataDir <- system.file("extdata", package="simExTargId")
+# list blank files
+blanksRaw <- list.files(extdataDir, pattern="blank", full.names=TRUE)
+# list plasma IPA extract files
+plasmaRaw <- list.files(extdataDir, pattern="IPA", full.names=TRUE)
+# covariates file
+coVariates <- paste(extdataDir, "coVariates.csv", sep="/")
+# copy coVariates to analysisDir
+coVariatesCopy <- paste(dummyAnalysisDir, basename(coVariates), sep="/")
+file.copy(from=coVariates, to=coVariatesCopy)
+# identify number of slave for parallel processing using parallel package
+nSlaves <- parallel::detectCores() - 1
+
+# move the blank files into the temporary directory to start the process
+blankRawCopies <- paste(dummyRawDir, basename(blanksRaw), sep="/")
+file.copy(from=blanksRaw, to=blankRawCopies)
+# wind back the clock to simulate the files having been acquired at least 5 mins
+# since last modification
+windBackTheClock <- function(fileCopy, time){
+  Sys.setFileTime(fileCopy, Sys.time() - time)
+}
+# apply to newly copied files
+sapply(blankRawCopies, windBackTheClock, 300)
+
+# move the plasma samples and wind back the time less than 5 mins
+plasmaRawCopies <- paste(dummyRawDir, basename(plasmaRaw), sep="/")
+file.copy(from=plasmaRaw, to=plasmaRawCopies)
+# apply to newly copied files
+sapply(plasmaRawCopies, windBackTheClock, 240)
+
+# Start simExTargId function
+simExTargId(rawDir=dummyRawDir, analysisDir=dummyAnalysisDir,
+            coVar=coVariatesCopy, nSlaves=nSlaves)
+```
+
+simExTargId will wait until at least five minutes after the raw data file was
+last modified, to ensure that the file acquisition has completed.
+
+After at least 3 samples of each class found in the second column of the
+co-variates table, retention time alignment, grouping, zero-filling, then
+pre-processing, PCA analysis, stats analysis and data-deconvolution will occur.
+
+
+During a run the output of the statistical analyses can be viewed using the 
+shiny application a zip file containing, a seperate .csv file for each sample to 
+reinject can be downloaded and used to guide further MS/MS experimentation.
+
+```{r eval=FALSE}
+# this command will open the application in your web-browser
+targIdShiny(analysisDir=paste(dummyAnalysisDir, "output/04.stats", sep="/"))
+
+```
