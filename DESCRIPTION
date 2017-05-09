@@ -1,21 +1,21 @@
 Package: simExTargId
 Title: Simultaneous peak-picking and MS2 target identification using XCMS.
-Version: 0.0.10
+Version: 0.1.0
 Author: Will Edmands <edmandsw@berkeley.edu>
 Description: Performs simultaneous raw data to mzXML conversion (MSconvert),
     peak-picking, statistics, visualization and possible MS2 target list
     determination during an MS1 metabolomic profiling experiment.
 Depends:
-    R (>= 3.2.0),
-    xcms,
-    MetMSLine,
-    tcltk2,
-    fastcluster,
-    foreach
+	R (>= 3.3.3)
 Imports:
-    shiny,
-    DT,
-    sendmailR
+	shiny (>= 1.0.2),
+	DT (>= 0.2),
+	sendmailR (>= 1.2.1),
+	xcms (>= 1.50.1),
+	MetMSLine (>= 1.1.2),
+	tcltk2 (>= 1.2.11),
+	fastcluster (>= 1.1.22),
+	foreach (>= 1.4.3)
 #Suggests: MSconvert (>= ProteoWizard release: 3.0.7162 (2015-2-5))
 License: GPL (>= 2)
 LazyData: true

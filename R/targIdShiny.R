@@ -1,6 +1,6 @@
 #' Simultaneous MS1 profiling and target identification visualization
-#' 
-#' @description Visualization of deconvoluted data obtained during an MS1-level 
+#'
+#' @description Visualization of deconvoluted data obtained during an MS1-level
 #' profiling experiment. All statResults (.csv) files within an analysis directory
 #' will be read and can be visualized as a volcano plot and as reactive
 #' tables indicating the direction of the median fold change. This allows the
@@ -10,122 +10,29 @@
 #' set by the experimenter. When a list of possible targets has been determined
 #' the table can be downloaded/ saved as a Csv file. This list of statistically
 #' significant targets can therefore be readily included in a MS/MS fragmentation
-#' experiment before the end of a profiling experiments completion. 
-#' 
-#' @param analysisDir (i.e. 04.stats)the full path of the analysis directory containing the 
+#' experiment before the end of a profiling experiments completion.
+#'
+#' @param analysisDir (i.e. 04.stats)the full path of the analysis directory containing the
 #'  (.csv) files output from \code{\link{simExTargId}}.
-#' 
+#'
 #' @seealso \code{\link{simExTargId}}, \code{\link{rtCorrClust}}.
-#'  
+#'
 #' @export
 targIdShiny <- function(analysisDir=NULL){
-  
+
   if(is.null(analysisDir)){
     message("window opened to select analysis (/04.stats) results directory containing the results (.csv) files...")
     flush.console()
-    
-    analysisDir <- tcltk::tk_choose.dir(default = "", 
+
+    analysisDir <- tcltk::tk_choose.dir(default = "",
                                         caption = "Select the analysis (/04.stats) results directory containing the results (.csv) files...")
   }
-  # altered volcano plot function from metabolomics package
-   VolcanoPlot <- function (folds, pvals, cexcutoff = 0.7, cexlab = 0.5, plimit = 0.05, 
-            fclimit = 2, xlab = "log2 Fold Change", ylab = "-log10 t-Test P-value", 
-            main = "Volcano Plot", ...) 
-  {
-    x_min <- (-1.0)
-    x_max <- 1.0
-    if (min(range(folds, finite = TRUE)) <= x_min) {
-      x_min <- min(range(folds, finite = TRUE))
-    }
-    if (max(range(folds, finite = TRUE)) >= x_max) {
-      x_max <- max(range(folds, finite = TRUE))
-    }
-    x_range <- c(x_min, x_max)
-    y_min <- 0
-    y_max <- 2
-    if (min(range(-log10(pvals), finite = TRUE)) <= y_min) {
-      y_min <- min(range(-log10(pvals), finite = TRUE))
-    }
-    if (max(range(-log10(pvals), finite = TRUE)) >= y_max) {
-      y_max <- max(range(-log10(pvals), finite = TRUE))
-    }
-    y_range <- c(y_min, y_max)
-    plot(x_range, y_range, type = "n", xlab = xlab, ylab = ylab, 
-         main = main, ...)
-    abline(h = -log10(plimit), col = "green", lty = "44")
-    mtext(paste("pval =", plimit), side = 2, at = -log10(plimit), 
-          cex = cexcutoff, las = 1)
-    abline(v = c(-log2(fclimit), log2(fclimit)), col = "violet", 
-           lty = "1343")
-    mtext(c(paste("-", fclimit, "fold"), paste("+", fclimit, 
-                                               "fold")), side = 3, at = c(log2(1/fclimit), log2(fclimit)), 
-          cex = cexcutoff, las = 1)
-    for (ii in 1:length(pvals)) {
-      if (-log10(pvals[ii]) > (-log10(plimit))) {
-        if (folds[ii] > (-log2(fclimit))) {
-          if (folds[ii] < log2(fclimit)) {
-            points(folds[ii], -log10(pvals[ii]), col = "orange", 
-                   pch = 20)
-#             text(folds[ii], -log10(pvals[ii]), labels = names(folds)[ii], 
-#                  pos = if (-log10(pvals[ii]) < 0.95 * max(y_range)) {
-#                    if (folds[ii] < 0.75 * max(x_range)) {
-#                      4
-#                    }
-#                    else {
-#                      2
-#                    }
-#                  }
-#                  else {
-#                    1
-#                  }, cex = cexlab)
-          }
-          else {
-            points(folds[ii], -log10(pvals[ii]), col = "red", 
-                   pch = 20)
-            text(folds[ii], -log10(pvals[ii]), labels = names(folds)[ii], 
-                 pos = if (-log10(pvals[ii]) < 0.95 * max(y_range)) {
-                   if (folds[ii] < 0.75 * max(x_range)) {
-                     4
-                   }
-                   else {
-                     2
-                   }
-                 }
-                 else {
-                   1
-                 }, cex = cexlab)
-          }
-        }
-        else {
-          points(folds[ii], -log10(pvals[ii]), col = "blue", 
-                 pch = 20)
-          text(folds[ii], -log10(pvals[ii]), labels = names(folds)[ii], 
-               pos = if (-log10(pvals[ii]) < 0.95 * max(y_range)) {
-                 if (folds[ii] < 0.75 * max(x_range)) {
-                   4
-                 }
-                 else {
-                   2
-                 }
-               }
-               else {
-                 1
-               }, cex = cexlab)
-        }
-      }
-      else {
-        points(folds[ii], -log10(pvals[ii]), col = "purple", 
-               pch = 20)
-      }
-    }
-  }
-  
-  ##############################################################################
+
   # identify results files
-  resFileNames <- list.files(analysisDir, full.names=T, pattern="\\.csv", 
+  resFileNames <- list.files(analysisDir, full.names=T, pattern="\\.csv",
                               recursive=T)
 
-  # add all results files into list 
+  # add all results files into list
   message("Reading ", length(resFileNames), " (.csv) results files please wait..")
   flush.console()
   resFiles <- lapply(resFileNames, read.csv, header=T, stringsAsFactors=F)
@@ -139,19 +46,19 @@ targIdShiny <- function(analysisDir=NULL){
     pAdjNames <- colnames(x)[pAdjNamesIndx]
     FCnamesIndx <- grep("FoldChange", colnames(x))
     FCnames <- colnames(x)[FCnamesIndx]
-    list(pValNamesIndx=pValNamesIndx, pValNames=pValNames, 
-         pAdjNamesIndx=pAdjNamesIndx, pAdjNames=pAdjNames, 
+    list(pValNamesIndx=pValNamesIndx, pValNames=pValNames,
+         pAdjNamesIndx=pAdjNamesIndx, pAdjNames=pAdjNames,
          FCnamesIndx=FCnamesIndx, FCnames=FCnames)})
-  
+
   # covariate names
   coVarNames <- unique(gsub("^p\\.value_", "", FCPnames[[1]]$pValNames))
   # Shiny UI    d
   targIdui <- shiny::shinyUI(shiny::fluidPage(
     shiny::titlePanel("Simultaneous Experiment - MS/MS Target Identification "),
     shiny::fluidRow(shiny::column(shiny::h4("Options"),width=3,
-                                  shiny::selectInput("Results_file", label=shiny::tags$b("select the results output file:"), 
+                                  shiny::selectInput("Results_file", label=shiny::tags$b("select the results output file:"),
                                                       names(resFiles)),
-                                  shiny::selectInput("co_variate", label=shiny::tags$b("select co-variate:"), 
+                                  shiny::selectInput("co_variate", label=shiny::tags$b("select co-variate:"),
                                                      coVarNames),
                                   shiny::numericInput("minFC",label=shiny::tags$b("minimum fold change : "),
                                                       value=2, min=1, max=20, step=0.1),
@@ -164,7 +71,7 @@ targIdShiny <- function(analysisDir=NULL){
                                   ), # end column 1
                     shiny::column(width=8,
                                   shiny::tabsetPanel(
-                                  shiny::tabPanel("volcano plot", 
+                                  shiny::tabPanel("volcano plot",
                                                   shiny::plotOutput("volcanoPlot", height="600px")),
                                   shiny::tabPanel("Targets negative fold change", DT::dataTableOutput(outputId="negFCtable")),
                                   shiny::tabPanel("Targets positive fold change", DT::dataTableOutput(outputId="posFCtable"))
@@ -173,8 +80,8 @@ targIdShiny <- function(analysisDir=NULL){
     ) # end fluid Row 1
     ) # end fluidPage
     ) # end CompMS2 shiny UI
-  targIdserver <- shiny::shinyServer(function(input, output, session){      
-    
+  targIdserver <- shiny::shinyServer(function(input, output, session){
+
     observe({ if(!is.null(input$Results_file)){
     resFileIndx <- which(names(resFiles) == input$Results_file)
     resFile <- resFiles[[resFileIndx]]
@@ -186,14 +93,14 @@ targIdShiny <- function(analysisDir=NULL){
         pvalIndx <- FCPnames.tmp$pAdjNames[grep(input$co_variate, FCPnames.tmp$pAdjNames)]
         log2FC <- log2(resFile[, FCPnames.tmp$FCnames[grep(input$co_variate, FCPnames.tmp$FCnames)]])
       }
-     
+
     pvals_tmp <- resFile[, pvalIndx]
    # names(log2FC) <- resFile$RtCorrClust
     names(pvals_tmp) <- resFile$RtCorrClust
-    
+
     # identify negative Fc and p-value
    if(!is.null(dim(log2FC))){
-     # if anova results then if any above min Foldchange and take 
+     # if anova results then if any above min Foldchange and take
      negFClogi <- log2FC < (-log2(input$minFC))
      posFClogi <- log2FC > log2(input$minFC)
      negFClogi <- rowSums(negFClogi) >= 1
@@ -208,29 +115,29 @@ targIdShiny <- function(analysisDir=NULL){
     colDispIndx <- grep("Feat|RtCorrClust|meanInt|mostIntSamp_|bestSampMSMS",
                         colnames(resFile))
     FCpIndx.tmp <- c(FCPnames.tmp$pValNamesIndx, FCPnames.tmp$pAdjNamesIndx,
-                     FCPnames.tmp$FCnamesIndx) 
+                     FCPnames.tmp$FCnamesIndx)
     coVarIndx.tmp <- FCpIndx.tmp[grep(input$co_variate, colnames(resFile)[FCpIndx.tmp])]
 
-    colDispIndx <- c(1:(min(FCpIndx.tmp) - 1), coVarIndx.tmp, colDispIndx) 
+    colDispIndx <- c(1:(min(FCpIndx.tmp) - 1), coVarIndx.tmp, colDispIndx)
     # volcano plot
     output$volcanoPlot <- shiny::renderPlot({
-                       VolcanoPlot(folds=log2FC, pvals=pvals_tmp, 
+            MetMSLine::volcanoPlot(folds=log2FC, pvals=pvals_tmp,
                                    plimit=input$minPval, fclimit=input$minFC,
-                                   cexcutoff = 1.5, cexlab = 1.5, 
+                                   cexcutoff = 1.5, cexlab = 1.5,
                                    ylab="-log10 p-value",
                                    xlab="log2 fold change")
     })
     # negFC table
     output$negFCtable <- DT::renderDataTable({
                        negFCtable.tmp <- resFile[negFClogi & pValLogi, colDispIndx]
-                       return(negFCtable.tmp)    
+                       return(negFCtable.tmp)
                        }, options = list(pageLength = 10))
     # posFC table
     output$posFCtable <- DT::renderDataTable({
                        posFCtable.tmp <- resFile[posFClogi & pValLogi, colDispIndx]
-                       return(posFCtable.tmp)    
-                       }, options = list(pageLength = 10)) 
-    
+                       return(posFCtable.tmp)
+                       }, options = list(pageLength = 10))
+
     # nSignifFeatures table
     output$nSignifFeat <- shiny::renderTable({
       sumNegFC <- sum(negFClogi & pValLogi)
@@ -242,7 +149,7 @@ targIdShiny <- function(analysisDir=NULL){
     # download data
     output$downloadData <- shiny::downloadHandler(
       filename = function() { paste0("TargId_",input$Results_file, "_",
-                                     input$co_variate, 
+                                     input$co_variate,
                                      ifelse(input$multTest == "marginal p-value",
                                             "", "_multTestAdjusted"), '.zip') },
       content = function(file) {
@@ -251,29 +158,29 @@ targIdShiny <- function(analysisDir=NULL){
         tmpdir <- tempdir()
         setwd(tempdir())
         print(tempdir())
-        
+
         csvIndiv <- by(Targets, Targets$bestSampMSMS, function(x){
           write.csv(x, file=paste0("TargId_",input$Results_file, "_",
-                                   input$co_variate, 
+                                   input$co_variate,
                                    ifelse(input$multTest == "marginal p-value",
-                                          "", "_multTestAdjusted"), "_", 
-                                   unique(x[, "bestSampMSMS"]), ".csv"), 
+                                          "", "_multTestAdjusted"), "_",
+                                   unique(x[, "bestSampMSMS"]), ".csv"),
                     row.names=F)})
-        
+
         fs <- paste0("TargId_",input$Results_file, "_",
-                     input$co_variate, 
+                     input$co_variate,
                      ifelse(input$multTest == "marginal p-value",
-                            "", "_multTestAdjusted"), "_", 
+                            "", "_multTestAdjusted"), "_",
                      unique(Targets[, "bestSampMSMS"]), ".csv")
         print(fs)
-        
+
         zip(zipfile=file, files=fs)
       },
       contentType = "application/zip")
     }}) # end observer 1
-  
+
   }) # END compMS2server
-  
+
   shiny::runApp(list(ui=targIdui, server=targIdserver), launch.browser=T)
-  
+
 } # end function

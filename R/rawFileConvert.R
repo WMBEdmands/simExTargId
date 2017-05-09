@@ -9,7 +9,7 @@
 #' @param rawFiles character vector of full path names to raw data files.
 #' @param mzXmlDir character full path to directory into which to write the mzXml
 #' files output by MSConvert.
-#' @param nSlaves numeric number of computer cores for parallel computation.
+#' @param nCores numeric number of computer cores for parallel computation.
 #' @param subSetSecs numeric vector of a minimum and maximum time window in 
 #' mzXML files (e.g. c(1500, 1900)).
 #' @param centroid do the raw data files need to be centroided during conversion by MSConvert
@@ -20,7 +20,7 @@
 #' @param MS2 logical should raw LC-MS data files converted by MSConvert to mzXml be converted
 #' as MS/MS files (e.g. data-dependent MS/MS files).
 #' @export
-rawFileConvert <- function(rawFiles=NULL, mzXmlDir=NULL, nSlaves=NULL, subSetSecs=NULL,
+rawFileConvert <- function(rawFiles=NULL, mzXmlDir=NULL, nCores=NULL, subSetSecs=NULL,
                            zlib=T, centroid=TRUE, MS2=FALSE){
   #error handling
  if(is.null(rawFiles)){
@@ -34,7 +34,11 @@ rawFileConvert <- function(rawFiles=NULL, mzXmlDir=NULL, nSlaves=NULL, subSetSec
     mzXmlDir <- tcltk::tk_choose.dir(default = "", 
                                         caption = "Select the directory your .mzXML files/ results files will be written to...")
   }
-  
+  if(!is.null(nCores)){
+    if(!require(foreach)){
+      stop('foreach package must be installed. see ?install.packages')
+    }
+  }
   # Establish msconvert commands to be sent to shell commands, centroid/ MS2 
   # (i.e. data dependent/independent) if necessary
   if(centroid == T){
@@ -63,12 +67,12 @@ rawFileConvert <- function(rawFiles=NULL, mzXmlDir=NULL, nSlaves=NULL, subSetSec
   flush.console()
   
   command <- paste0('msconvert "', rawFiles, convType, ' -o "', mzXmlDir, '"')
-  # if nSlaves not null then convert to mzXML in parallel
-  if(!is.null(nSlaves) & length(command) > 1){
+  # if nCores not null then convert to mzXML in parallel
+  if(!is.null(nCores) & length(command) > 1){
     # start cluster
-    message(paste0("Starting SNOW cluster with ", nSlaves, " local sockets...\n"))
+    message(paste0("Starting SNOW cluster with ", nCores, " local sockets...\n"))
     flush.console()
-    cl <- parallel::makeCluster(nSlaves) 
+    cl <- parallel::makeCluster(nCores) 
     doSNOW::registerDoSNOW(cl)
     message("Converting raw files and saving in mzXmlFiles directory...\n")
     flush.console()

@@ -3,17 +3,17 @@
 #' @param fileName complete path to new .csv file
 writeCsvAttempt <- function(df=NULL, fileName=NULL){
   # write batchAdjusted residual xcms peak table to a .csv
-  writeAttempt <- suppressWarnings(try(write.csv(df, fileName, 
-                                                 row.names=F), silent=T))
+  writeAttempt <- suppressWarnings(try(write.csv(df, fileName,
+                                                 row.names=FALSE), silent=TRUE))
   errorMessage <- 0
   while(class(writeAttempt) == "try-error"){
     if(errorMessage == 0){
-      message('Please close the ', basename(fileName), 
+      message('Please close the ', basename(fileName),
               ' file so simExTargId can continue...')
       flush.console()
       errorMessage <- 1
     }
-    writeAttempt <- suppressWarnings(try(write.csv(df, fileName, 
-                                                   row.names=F), silent=T))
-  } 
+    writeAttempt <- suppressWarnings(try(write.csv(df, fileName,
+                                                   row.names=FALSE), silent=TRUE))
+  }
 }
