@@ -4,24 +4,23 @@
 \alias{emailNotifier}
 \title{email notification system for LC-MS analyses}
 \usage{
-emailNotifier(rawDir = NULL, emailAddress = NULL, emailTime = 20,
+emailNotifier(rawDir = NULL, emailAddress = NULL, emailTime = 10,
   maxTime = 60, mailControl = list(smtpServer = "ASPMX.L.GOOGLE.COM"))
 }
 \arguments{
-\item{rawDir}{character full path name of raw data directory into which raw data will 
+\item{rawDir}{character full path name of raw data directory into which raw data will
 eventually/ has already been started to be written.}
 
 \item{emailAddress}{character email address from and to which to send warning email
-that run may have stopped. (if not supplied then email notification will not be sent) 
+that run may have stopped. (if not supplied then email notification will not be sent)
 see \code{\link{sendmail}}.}
 
-\item{emailTime}{numeric length of time (in minutes) after the last raw data 
+\item{emailTime}{numeric length of time (in minutes) after the last raw data
 file was written before an email notification will be sent. minimum value is 5 minutes.}
 
-\item{mailControl}{List of SMTP server settings see \code{\link{sendmail}} for details. 
+\item{mailControl}{List of SMTP server settings see \code{\link{sendmail}} for details.
 Example given is for google mail.}
 }
 \description{
 email notification system for LC-MS analyses
 }
-

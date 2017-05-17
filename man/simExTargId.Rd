@@ -4,18 +4,20 @@
 \alias{simExTargId}
 \title{simExTargId}
 \usage{
-simExTargId(rawDir = NULL, analysisDir = NULL, coVar = NULL,
-  nSlaves = NULL, minFiles = 10, centroid = TRUE, MS2 = FALSE,
-  zeroFillvalue = NULL, normMethod = NULL, manBatchAdj = NULL,
-  LogTransBase = exp(1), blankFC = 2, replicates = FALSE,
-  pAdjustMethod = "BH", corrThresh = 0.8, minFeat = 1,
-  hclustMethod = "median", distMeas = "euclidean", bw = 2,
-  mzwid = 0.015, minfrac = 0.25, xcmsSetArgs = list(peakwidth = c(2, 20),
-  ppm = 10, snthresh = 5, method = "centWave"), pcaOutIdArgs = list(cv = "q2",
-  scale = "pareto", centre = T), maxTime = 60)
+simExTargId(rawDir = NULL, studyName = "exampleStudyName",
+  analysisDir = NULL, coVar = NULL, nCores = NULL, ionMode = NULL,
+  metab = NULL, minFiles = 10, centroid = TRUE, mzXml = TRUE,
+  zeroFillValue = NULL, normMethod = NULL, manBatchAdj = NULL,
+  LogTransBase = exp(1), smoothSpan = 0.8, cvThresh = 30, blankFC = 2,
+  replicates = FALSE, pAdjustMethod = "BH", bw = 2, mzwid = 0.015,
+  minfrac = 0.25, xcmsSetArgs = list(peakwidth = c(5, 20), ppm = 10,
+  snthresh = 5, method = "centWave"), pcaOutIdArgs = list(cv = "q2", scale =
+  "pareto", centre = TRUE), peakMonitorArgs = list(ppm = 10, rtdev = 30,
+  maxSignalAtt = 20, percBelow = 20), maxTime = 60, emailAddress = NULL,
+  mailControl = list(smtpServer = "ASPMX.L.GOOGLE.COM"), minFeatPseudo = 2)
 }
 \arguments{
-\item{rawDir}{character full path name of raw data directory into which raw data will 
+\item{rawDir}{character full path name of raw data directory into which raw data will
 eventually/ has already been started to be written. An "_analysis" directory
 will be automatically created into which all converted files (.mzXML) and
 results output will be saved. Fifteen minutes after the last modification of a new
@@ -25,10 +27,15 @@ occur (\code{\link{xcmsSet}}).}
 \item{analysisDir}{full path name of analysis directory, all mzXML, peak-picking
 and results files will be saved here.}
 
-\item{coVar}{covariate table can be supplied as either a full path name to a 
+\item{coVar}{covariate table can be supplied as either a full path name to a
 .csv file (see details) or as a \code{\link{data.frame}}.}
 
-\item{nSlaves}{numeric number of computer cores for parallel computation.}
+\item{nCores}{numeric number of computer cores for parallel computation.}
+
+\item{ionMode}{character ionization polarity must be specific (default= NULL).
+Must be be either "negative" or "positive" or an abbreviation starting from "neg" or "pos".}
+
+\item{metab}{character or data.frame. Full path to a csv file of a list of metabolites you wish to monitor (or a data.frame). See \link{peakMonitor} for more details.}
 
 \item{minFiles}{the minimum number of raw data file converted to mzXML files
 before commencing subsequent steps of XCMS processing, pre-processing, PCA and
@@ -38,25 +45,29 @@ statistical analysis. Default = 10.}
 \url{http://proteowizard.sourceforge.net/downloads.shtml}. NB. centroiding of data
 is necessary for utilization of the "centWave" algorithm of xcms (\code{\link{findPeaks.centWave-methods}}).}
 
-\item{MS2}{logical should raw LC-MS data files converted by MSConvert to mzXml be converted
-as MS/MS files (e.g. data-dependent MS/MS files).}
+\item{mzXml}{logical should raw LC-MS data files converted by MSConvert to mzXml or
+mzML file formats (default = TRUE i.e. files are converted to the mzXml format).}
 
-\item{zeroFillvalue}{value to fill missing and zero values in the xcms peak table. If argument is left blank
+\item{zeroFillValue}{value to fill missing and zero values in the xcms peak table. If argument is left NULL
 the default is to fill with half the smallest non-zero value. (see: \code{\link{zeroFill}}).}
 
-\item{normMethod}{normalization method to perform (see: \code{\link{signNorm}}). 
-If argument is left blank no normalization is performed. Options include 
-median fold change (probabilistic quotient) 'medFC' or total ion signal 
+\item{normMethod}{normalization method to perform (see: \code{\link{signNorm}}).
+If argument is left blank no normalization is performed. Options include
+median fold change (probabilistic quotient) 'medFC' or total ion signal
 'totIon' methods.}
 
 \item{manBatchAdj}{character vector of co-variate table column names. If argument is not supplied automatic cluster identification/ batch adjustment using the \code{\link{pcaClustId}} function will occur prior to PCA analysis. If multiple
 column names are supplied a multiple linear regression will be calculated and the batch adjusted residuals obtained from the model.}
 
-\item{LogTransBase}{numeric base value for log transformation. defaults to exponential of 1 (see: \code{\link{logTrans}}).}
+\item{LogTransBase}{numeric base value for log transformation. defaults to exponential of 1 (see: \code{\link{preProc}}).}
 
-\item{blankFC}{numeric minimum fold difference for each xcms peak table feature 
-between the sample injections (numerator) and negative control blank injections (denominator). 
-This will result in all xcms peak table features which are less than blankFC 
+\item{smoothSpan}{see \link{preProc} function of MetMSLine for details (default = 0.8).}
+
+\item{cvThresh}{see \link{preProc} function of MetMSLine for details (default = 30 i.e. 30\% coefficient of variation).}
+
+\item{blankFC}{numeric minimum fold difference for each xcms peak table feature
+between the sample injections (numerator) and negative control blank injections (denominator).
+This will result in all xcms peak table features which are less than blankFC
 fold change higher in the samples than the blanks being removed (default = 2 fold).
 This background substraction will not occur until there are at least 1 blank and 1 sample
 data file acquired and converted to mzXML files.}
@@ -64,20 +75,6 @@ data file acquired and converted to mzXML files.}
 \item{replicates}{logical (default = FALSE) if TRUE then the 3rd column of the co-variate table supplied will be used to identify analytical/ preparative replicates of the same sample. This information will be used to average signal intensities of analytical replicates.}
 
 \item{pAdjustMethod}{character p-value multiple testing adjustment method (see: \code{\link{p.adjust}}).}
-
-\item{corrThresh}{correlation coefficient threshold (non-parametric Spearman's 
-Rho) to group features within a retention time cluster.}
-
-\item{minFeat}{minimum number of features with a Retention time/ correlation
-cluster to consider it a group (default = 2, i.e. a cluster must contain at
-least 2 features to be considered a group).}
-
-\item{hclustMethod}{hierarchical clustering method to \code{\link{hclust.vector}} 
-method of fastcluster package (default = "median").}
-
-\item{distMeas}{distance measure for retention time clustering (default = "euclidean"). 
-see \code{\link{hclust.vector}}.
-Within retention clusters dissimilarity is computed as 1-correlation coefficient.}
 
 \item{xcmsSetArgs}{list of arguments of the xcms function \code{\link{xcmsSet}}.}
 
@@ -87,58 +84,103 @@ Within retention clusters dissimilarity is computed as 1-correlation coefficient
 was written. If most recent raw data file is older than this time then simExTargId
 will stop. This is designed to stop the process if necessary after an extended period
 of time. default = 60 mins.}
+
+\item{emailAddress}{character vector of email address(es) from and to which to send warning email
+that run may have stopped, QCs are outlying or signal has attenuated. (if not supplied then email notifications will not be sent)
+see \code{\link{sendmail}}.}
+
+\item{mailControl}{List of SMTP server settings see \code{\link{sendmail}} for details.
+Example given is for google mail.}
+
+\item{minFeatPseudo}{integer the minimum number of features for a CAMERA pseudospectrum
+to be considered (default =2 i.e. a CAMERA pseudospectrum must consist of a
+minimum of two LC-MS peak groups). A weighted mean (weighted by the summed peak area of all samples)
+will be calculated for each pseudospectrum group. This removal of artefactual
+LC-MS features is performed to reduce the multiple testing burden prior to
+statistical analysis.}
 }
 \description{
-This function seeks to remove the gap between metabolomic 
-MS1 profiling experiments and discovery of statistically relevant targets for 
+This function seeks to remove the gap between metabolomic
+MS1 profiling experiments and discovery of statistically relevant targets for
 MSn fragmentation based identification.
 }
 \details{
-The function is designed to faciliate 
+The function is designed to faciliate
 simultaneous collection of raw metabolomic
 profiling data, conversion from an instrument manufacturer's proprietary format to the
  open file format mzXML conversion (using the command line
 version of MSConvert) to a new analysis directory, xcms based peak picking/
 alignment, data pre-processing (\code{\link{zeroFill}}, \code{\link{logTrans}},
  \code{\link{signNorm}}), automatic PCA-based outlier removal, scores plot
- cluster identification and automatic potential batch adjustment (\code{\link{pcaOutId}}, 
+ cluster identification and automatic potential batch adjustment (\code{\link{pcaOutId}},
  \code{\link{pcaClustId}}, \code{\link{batchAdj}}), automatic co-variate based
  statistical analysis and feature deconvolution (\code{\link{coVarStatType}},
-  \code{\link{rtCorrClust}}). The data output of the workflow can be 
-  visualized by a shiny application (\code{\link{shiny}}) at any time 
-  (\code{\link{targIdShiny}}) and MSn fragmentation targets rapidly identified. 
+  \code{\link{rtCorrClust}}). The data output of the workflow can be
+  visualized by a shiny application (\code{\link{shiny}}) at any time
+  (\code{\link{targIdShiny}}) and MSn fragmentation targets rapidly identified.
 
  The function works according to the following process:
 
  1. The function can be run before the collection of the first raw data file
- or after collection of any number of raw MS data files. 
- 
+ or after collection of any number of raw MS data files.
+
  2. The directory location where the raw data are being written to must be provided
- (rawDir), as well as a comma delimited text file (.csv) containing two named columns.
- The first column must contain the precise names of each raw MS data file
- that will be eventually created in the raw data directory. 
- The second column of the .csv file must contain the binary class membership of
- each raw MS data file to be considered for statistical analysis. e.g. case/ control,
- treated/ untreated, exposed/ unexposed, blank/ sample 
- 
- N.B. Raw data files such as blank and quality control for example which are written to 
+ (rawDir), as well as a comma delimited text file (.csv) containing at minimum
+ 3 columns namely.
+ \enumerate{
+ \item The first column must contain the precise names of each raw MS data file
+ that will be eventually created in the raw data directory.
+
+  \item The second column of the .csv file must contain the sample class of
+ each raw MS data file. There are 3 suggested injection/run type names that should be included
+ in this column for Good Laboratory Practice (GLP) and ideal
+ metabolomic experimental design. The only mandatory injection/run type name
+ is "sample" (not case-sensitive), simExTargId will stop if this is not found in the second column.
+ This will direct simExTargId to perform statistical analysis on samples only for which
+ co-variates are available in columns 3 -  total number of columns.
+  In order to use the full functionality of simExTargId it is also suggested that
+ "local" equivolume pooled quality control samples are included in the 2nd column
+ and must be named as "QC" (not case-sensitive). If these injection types are detected then many additional
+ processing functions and monitoring methods will be accessed. These QC
+ samples can be monitored for signal attenuation, used to smooth the data (see
+ \link{loessSmooth}), filter based on minimum CV\% (see \link{cvCalc}) and
+ used to identify if the last QC injected is outlying in the automatic principle components analysis  (see \link{pcaOutId}).
+ In the case of signal attenuation (see \link{peakMonitor}) and a QC sample
+ being detected as an outlier an email will be sent to the email address(es)
+ supplied.
+
+ In order to distinguish a column conditioning QC from a regular QC sample
+ the suffix "cc" should be added to the name "QC". If a QC is not used for
+ column conditioning then just "cc" (not case-sensitive) is sufficient. These
+ will not be monitored by the peakMonitor of pcaOutId functions.
+
+ Finally a blank sample should be denoted as "blank" (also not case-sensitive).
+ If these are added to the coVariate table second column then blank subtraction
+ will also be performed (see \link{blankSub}).
+ Any additional injection/run types are allowed e.g. "gQC" (global QC) or "MS2" for example.
+ If the file is denoted as "MS2" then these files will be converted differently
+ to normal MS1 profiling data by MSConvert.
+
+ N.B. Raw data files such as blank and quality control for example which are written to
  the raw data directory during an experiment will also be included in the
- xcms peak-picking and alignment process but will not be considered in the 
+ xcms peak-picking and alignment process but will of course not be considered in the
  subsequent statistical analysis.
- 
- This information will be used to inform the 
- non-parametric statistical analysis at present only a binary case is supported
- i.e. two sample classes.    
 
-
-analysis.
+ \item columns 3 + all subsequent columns can contain a mixture of co-variates
+ these can be any combination of continuous or categorical variable associated
+ with the "sample" injections/runs specified in column 2. The function
+ \link{coVarTypeStat} will select an appropriate univariate statistical method type
+ to use based on this contents of these columns at any stage of the profiling
+ run. For example if 3 categorical classes of minimum size each are identified
+ then an ANOVA analysis will be performed or if a variable is found to be
+ continuous then a correlation analysis will be performed.
+}
 }
 \examples{
-# example XCMS peak picking/ grouping/ alignment settings for high-resolution LC-MS data (Q-ToF). 
+# example XCMS peak picking/ grouping/ alignment settings for high-resolution LC-MS data (Q-ToF).
 # peakwidth=c(2, 20), ppm=10, snthresh=5, bw=2, mzwid=0.015, minfrac=0.25, method="centWave"
 }
 \seealso{
-\code{\link{xcmsSet}}, \code{\link{retcor}}, \code{\link{group}}, 
+\code{\link{xcmsSet}}, \code{\link{retcor}}, \code{\link{group}},
 \code{\link{fillPeaks}}, \code{\link{diffreport}},
 }
-

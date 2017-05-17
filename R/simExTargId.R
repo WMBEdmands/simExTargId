@@ -26,7 +26,7 @@
 #' is necessary for utilization of the "centWave" algorithm of xcms (\code{\link{findPeaks.centWave-methods}}).
 #' @param mzXml logical should raw LC-MS data files converted by MSConvert to mzXml or
 #' mzML file formats (default = TRUE i.e. files are converted to the mzXml format).
-#' @param zeroFillvalue value to fill missing and zero values in the xcms peak table. If argument is left NULL
+#' @param zeroFillValue value to fill missing and zero values in the xcms peak table. If argument is left NULL
 #'  the default is to fill with half the smallest non-zero value. (see: \code{\link{zeroFill}}).
 #' @param normMethod normalization method to perform (see: \code{\link{signNorm}}).
 #' If argument is left blank no normalization is performed. Options include
@@ -36,7 +36,7 @@
 #' column names are supplied a multiple linear regression will be calculated and the batch adjusted residuals obtained from the model.
 #' @param replicates logical (default = FALSE) if TRUE then the 3rd column of the co-variate table supplied will be used to identify analytical/ preparative replicates of the same sample. This information will be used to average signal intensities of analytical replicates.
 #' @param LogTransBase numeric base value for log transformation. defaults to exponential of 1 (see: \code{\link{preProc}}).
-#' @param smoothSpan see \link{preProc} function of MetMSLine for details (default = NULL).
+#' @param smoothSpan see \link{preProc} function of MetMSLine for details (default = 0.8).
 #' @param cvThresh see \link{preProc} function of MetMSLine for details (default = 30 i.e. 30\% coefficient of variation).
 #' @param blankFC numeric minimum fold difference for each xcms peak table feature
 #' between the sample injections (numerator) and negative control blank injections (denominator).
@@ -45,18 +45,7 @@
 #' This background substraction will not occur until there are at least 1 blank and 1 sample
 #' data file acquired and converted to mzXML files.
 #' @param pAdjustMethod character p-value multiple testing adjustment method (see: \code{\link{p.adjust}}).
-#' @param corrThresh correlation coefficient threshold (non-parametric Spearman's
-#' Rho) to group features within a retention time cluster.
-#' @param minFeat minimum number of features with a Retention time/ correlation
-#' cluster to consider it a group (default = 2, i.e. a cluster must contain at
-#' least 2 features to be considered a group).
-#' @param hclustMethod hierarchical clustering method to \code{\link{hclust.vector}}
-#' method of fastcluster package (default = "median").
-#' @param distMeas distance measure for retention time clustering (default = "euclidean").
-#' see \code{\link{hclust.vector}}.
-#' Within retention clusters dissimilarity is computed as 1-correlation coefficient.
 #' @param xcmsSetArgs list of arguments of the xcms function \code{\link{xcmsSet}}.
-#' @param xcmsDiffRepArgs list of arguments of the xcms function \code{\link{diffreport}}.
 #' @param pcaOutIdArgs list of arguments to the \code{\link{pcaOutId}} function.
 #' @param maxTime maximum time (in minutes) from the time the last raw data file
 #' was written. If most recent raw data file is older than this time then simExTargId
@@ -67,6 +56,12 @@
 #' @param emailAddress character vector of email address(es) from and to which to send warning email
 #' that run may have stopped, QCs are outlying or signal has attenuated. (if not supplied then email notifications will not be sent)
 #' see \code{\link{sendmail}}.
+#' @param minFeatPseudo integer the minimum number of features for a CAMERA pseudospectrum
+#' to be considered (default =2 i.e. a CAMERA pseudospectrum must consist of a
+#' minimum of two LC-MS peak groups). A weighted mean (weighted by the summed peak area of all samples)
+#' will be calculated for each pseudospectrum group. This removal of artefactual
+#' LC-MS features is performed to reduce the multiple testing burden prior to
+#' statistical analysis.
 #'
 #' @details The function is designed to faciliate
 #' simultaneous collection of raw metabolomic
@@ -145,25 +140,23 @@
 #' \code{\link{fillPeaks}}, \code{\link{diffreport}},
 #' @export
 simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
-                        analysisDir=NULL, mzXmlDir=NULL, coVar=NULL,
+                        analysisDir=NULL, coVar=NULL,
                         nCores=NULL, ionMode=NULL, metab=NULL,
                         minFiles=10, centroid=TRUE, mzXml=TRUE,
-                        zeroFillvalue=NULL, normMethod=NULL,
+                        zeroFillValue=NULL, normMethod=NULL,
                         manBatchAdj=NULL, LogTransBase=exp(1),
-                        smoothSpan=NULL, cvThresh=30, blankFC=2,
+                        smoothSpan=0.8, cvThresh=30, blankFC=2,
                         replicates=FALSE, pAdjustMethod="BH",
-                        corrThresh=0.8, minFeat=1, hclustMethod="median",
-                        distMeas="euclidean",
+
                         bw=2, mzwid=0.015, minfrac=0.25,
-                        xcmsSetArgs=list(peakwidth=c(2, 20), ppm=10, snthresh=5,
+                        xcmsSetArgs=list(peakwidth=c(5, 20), ppm=10, snthresh=5,
                                          method="centWave"),
                         pcaOutIdArgs=list(cv="q2", scale="pareto", centre=TRUE),
-                        peakMonitorArgs=list(ppm=10, rtdev=10, maxSignalAtt=20,
+                        peakMonitorArgs=list(ppm=10, rtdev=30, maxSignalAtt=20,
                                              percBelow=20),
-                        xcmsDiffRepArgs=list(filebase="xcmsOutput_Allsamples",
-                                             eicmax=10000, eicwidth=60),
                         maxTime=60, emailAddress=NULL,
-                        mailControl=list(smtpServer="ASPMX.L.GOOGLE.COM")){
+                        mailControl=list(smtpServer="ASPMX.L.GOOGLE.COM"),
+                        minFeatPseudo=2){
 
   if(is.null(ionMode)){
     stop('ionMode must be specified must be negative or positive or an abbreviation starting from neg or pos')
@@ -171,6 +164,10 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   if(!grepl('neg|pos', ionMode, ignore.case = TRUE)){
     stop('ionMode argument must be be either negative or positive or an abbreviation starting from neg or pos')
   }
+  if(!require(pcaMethods)){
+    stop('package pcaMethods is required please install from Bioconductor')
+  }
+
   # file conversion type (i.e. data dependent/independent) if necessary
   convTypeMS1 <- paste0('" --32 --', ifelse(mzXml, 'mzXML', 'mzML'),
                         ' --filter "', ifelse(centroid, 'peakPicking true 1-"',
@@ -213,10 +210,14 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   }
 
   if(is.null(metab)){
-    metab <- tcltk::tclvalue(tcltk::tkgetOpenFile(title="select your metabolites to monitor file. Click cancel if you do not wish to monitor any metabolites."))
+    message("Select the any metabolites you wish to monitor in the xcms output table...\n",
+            'N.B. the table (.csv) must a minimum of the following mandatory columns:\n1. "name"\n2. "mzmed"\n3. "rtmed"\n')
+    flush.console()
+    metab <- tcltk::tclvalue(tcltk::tkgetOpenFile(title="select your metabolites to monitor file. Click cancel if you do not wish to monitor any metabolites.", initialdir=analysisDir))
   }
 
   if(is.character(metab)){
+    if(metab != ''){
     if(!grepl('\\.csv$', metab)){
       stop('metabolite table file must be a .csv')
     }
@@ -229,15 +230,24 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     if(any(duplicated(metab$name))){
       stop('metabolite table names must be unique. If you have the same compound name twice (i.e. with different retention times place an additional unique integer at the end of the name. e.g. lysoPC (14:0) 1, lysoPC (14:0) 1')
     }
+    }
   }
   # create sub-directories to save mzXML files and output
   # mzXML files
-  mzXmlDir <- paste0(analysisDir, '/', studyName, "_mzXmlFiles")
+  mzXmlDir <- paste0(analysisDir, '/', studyName, ifelse(mzXml, "_mzXmlFiles", '_mzMlFiles'))
+  suppressWarnings(dir.create(mzXmlDir))
+  # add mode
+  mzXmlDir <- paste0(mzXmlDir, '/', toupper(substring(ionMode, 1, 3)))
   suppressWarnings(dir.create(mzXmlDir))
   # MS1 data
   mzXmlDir <- paste0(mzXmlDir, '/MS1/')
   suppressWarnings(dir.create(mzXmlDir))
 
+  # study dir
+  analysisDir <- paste0(analysisDir, '/', studyName, '_analysis')
+  suppressWarnings(dir.create(analysisDir))
+  analysisDir <- paste0(analysisDir, '/', toupper(substring(ionMode, 1, 3)))
+  suppressWarnings(dir.create(analysisDir))
   # R output directory for RData files and scripts
   rDir <- paste0(analysisDir, "/R")
   suppressWarnings(dir.create(rDir))
@@ -262,8 +272,8 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   preProcDir <- paste0(outputDir, "/02.preProc")
   suppressWarnings(dir.create(preProcDir))
   # save Preprocessing parameters used for records
-  parameters.tmp <- data.frame(zeroFillvalue=ifelse(is.null(zeroFillvalue),
-                                               "halfMinNonZero", zeroFillvalue),
+  parameters.tmp <- data.frame(zeroFillValue=ifelse(is.null(zeroFillValue),
+                                               "halfMinNonZero", zeroFillValue),
                                logTransBase=LogTransBase,
                                normMethod=ifelse(is.null(normMethod),
                                                  "NoNorm", normMethod))
@@ -274,7 +284,7 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   suppressWarnings(dir.create(pcaDir))
   # save Pca parameters used for records
   # extract formals
-  tmpArgs <- unlist(formals(pcaOutId), recursive = T)
+  tmpArgs <- unlist(formals(MetMSLine::pcaOutId), recursive = TRUE)
   # remove ellipsis
   tmpArgs <- tmpArgs[names(tmpArgs) != "..."]
   # remove any args already supplied
@@ -291,6 +301,9 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   # documents directory for output of Rmarkdown reports and future manuscript writing
   docDir <- paste0(analysisDir, "/doc")
   suppressWarnings(dir.create(docDir))
+  # data directory for files that aren't modified
+  dataDir <- paste0(analysisDir, "/data")
+  suppressWarnings(dir.create(dataDir))
 
   # select covariates
   if(is.null(coVar)){
@@ -300,14 +313,17 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     coVar <- tcltk::tclvalue(tcltk::tkgetOpenFile(filetypes = "{{comma delimited text file} {.csv}} {{All files} *}",
                                                 title="Select your sample runorder/ covariates file",
                                                 initialdir=analysisDir))
-   }
+  }
+  coVarBaseName <- basename(coVar)
   # read in coVar table if necessary
   coVar <- read.csv(coVar, stringsAsFactors=FALSE, header=TRUE)
   if(ncol(coVar) < 3){
     stop('worklist/co-variates table must contain a minimum of 3 columns. See system.file("extdata", "exampleWorklist_coVariates.csv", package = "simExTargId") for an example worklist/co-variates table.')
   }
-  # add outliers column
-  coVar$outlier <- FALSE
+
+  message('Saving co-variates/worklist table (.csv) to ', paste0(dataDir, '/', coVarBaseName), '\n\n')
+  # write co-variates worklist to data directory
+  write.csv(coVar, paste0(dataDir, '/', coVarBaseName), row.names = FALSE)
   # 1. check no missing values
   if(any(coVar[, 1] == '')){
     stop('missing file names in first column of worklist/co-variates table.  See system.file("extdata", "exampleWorklist_coVariates.csv", package = "simExTargId") for an example worklist/co-variates table.')
@@ -333,11 +349,11 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   # 5. print summary
   message('The following injection/run types were detected in column 2 of the worklist/co-variates table:\n', paste0(names(sampTypeSumm), ' (n=', sampTypeSumm, ')\n\n'), 'Is this correct?')
   flush.console()
-  proceed <- readline(paste0('\n[y/n]:'))
-
-  if(tolower(proceed) != 'y'){
-    warning('simExTargId run stopped. See system.file("extdata", "exampleWorklist_coVariates.csv", package = "simExTargId") for an example worklist/co-variates table.\n', immediate. = TRUE)
-  }
+  # proceed <- readline(paste0('\n[y/n]:'))
+  #
+  # if(tolower(proceed) != 'y'){
+  #   warning('simExTargId run stopped. See system.file("extdata", "exampleWorklist_coVariates.csv", package = "simExTargId") for an example worklist/co-variates table.\n', immediate. = TRUE)
+  # }
   # quality control idx
   qcIdx <- grepl('^QC$', coVar[, 2], ignore.case = TRUE)
   # blank idx
@@ -347,16 +363,15 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   # ms/ms idx
   ms2Idx <- grepl('^MS2$', coVar[, 2], ignore.case = TRUE)
 
-  if(any(ms2Idx)){
-    # create seperate ms2 directory
-    # MS2 data
-    ms2Dir <- paste0(dirname(mzXmlDir), '/MS2/')
-    suppressWarnings(dir.create(ms2Dir))
-  }
+  # create seperate ms2 directory
+  # MS2 data
+  ms2Dir <- paste0(dirname(mzXmlDir), '/MS2/')
+  suppressWarnings(dir.create(ms2Dir))
   # extract sample file names
   sampleFileNames <- as.character(coVar[, 1])
   # extract sample classes identities
   sampleClasses <- as.character(coVar[, 2])
+  names(sampleClasses) <- sampleFileNames
   # characterize sample classes
   sampIdx <- grepl('^sample$', sampleClasses, ignore.case = TRUE)
   # extract potential replicates identities column
@@ -365,7 +380,7 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   }
 
   # if necessary change file names
-  coVar[, 1] <- gsub('-', '.', coVar[, 1])
+  #coVar[, 1] <- gsub('-', '.', coVar[, 1])
   # if the sample begins with a number add an X as these will appear with X
   # in data.frame
   numBeginning <- grepl("^[0-9]", coVar[, 1])
@@ -399,15 +414,17 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   }
   # mzXML file detect
   mzXmlFiles <- dir(mzXmlDir, full.names=TRUE, pattern="\\.mzXML$|\\.mzML$")
+  # add ms2 files
+  mzXmlFiles <- c(mzXmlFiles, dir(ms2Dir, full.names=TRUE, pattern="\\.mzXML$|\\.mzML$"))
   # have files converted properly (i.e.) file size greater 100 bytes
-  fileSizes <- file.info(mzXmlFiles)$size > 100
-  # inform user of files that may not have converted properly
-  if(any(fileSizes == FALSE)){
-    message('The following mzXML files have a file size of less than 100 bytes',
-            ' and may not have converted properly: \n',
-            paste0(basename(mzXmlFiles)[fileSizes == F], '\n'))
-  }
-  mzXmlFiles <- mzXmlFiles[fileSizes]
+  # fileSizes <- file.info(mzXmlFiles)$size > 100
+  # # inform user of files that may not have converted properly
+  # if(any(fileSizes == FALSE)){
+  #   message('The following mzXML/mzML files have a file size of less than 100 bytes',
+  #           ' and may not have converted properly: \n',
+  #           paste0(basename(mzXmlFiles)[fileSizes == F], '\n'))
+  # }
+  # mzXmlFiles <- mzXmlFiles[fileSizes]
   # basenames of both mzXML files and raw files
   bnMzXmlFiles <- gsub("\\.mzXML$|\\.mzML$", "", basename(mzXmlFiles))
   bnRawFiles <- gsub("\\.d$|\\.RAW$", "", basename(rawFiles))
@@ -430,8 +447,6 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
 
   # compare sample file names to .mzXmL files
   SampleConv <- sampleFileNames %in% gsub("\\.mzXML$|\\.mzML$", "", basename(mzXmlFiles))
-  ms2Conv <- sampleConv & ms2Idx
-  # Establish msconvert commands to be sent to shell commands, centroid/ MS2
 
   # if all already converted do nothing
   if(any(SampleConv == FALSE)){
@@ -443,15 +458,17 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     rawFiles <- dir(rawDir, full.names=TRUE, pattern="\\.d$|\\.RAW$")
     # mzXML file detect
     mzXmlFiles <- dir(mzXmlDir, full.names=TRUE, pattern="\\.mzXML$|\\.mzML$")
+    # add ms2 files
+    mzXmlFiles <- c(mzXmlFiles, dir(ms2Dir, full.names=TRUE, pattern="\\.mzXML$|\\.mzML$"))
     # have files converted properly (i.e.) file size greater 100 bytes
-    fileSizes <- file.info(mzXmlFiles)$size > 100
-    # inform user of files that may not have converted properly
-    if(any(fileSizes == F)){
-      message('The following mzXML files have a file size of less than 100 bytes',
-              ' and may not have converted properly: \n',
-              paste0(basename(mzXmlFiles)[fileSizes == FALSE], '\n'))
-    }
-    mzXmlFiles <- mzXmlFiles[fileSizes]
+    # fileSizes <- file.info(mzXmlFiles)$size > 100
+    # # inform user of files that may not have converted properly
+    # if(any(fileSizes == FALSE)){
+    #   message('The following mzXML files have a file size of less than 100 bytes',
+    #           ' and may not have converted properly: \n',
+    #           paste0(basename(mzXmlFiles)[fileSizes == FALSE], '\n'))
+    # }
+    # mzXmlFiles <- mzXmlFiles[fileSizes]
     # basenames of both mzXML files and raw files
     bnMzXmlFiles <- gsub("\\.mzXML$|\\.mzML$", "", basename(mzXmlFiles))
     bnRawFiles <- gsub("\\.d$|\\.RAW$", "", basename(rawFiles))
@@ -478,28 +495,39 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     timeChIndx <- timeChIndx > 5
     # subtract mzXmlfiles from raw
     rawFiles <- rawFiles[(bnRawFiles %in% bnMzXmlFiles) == FALSE & timeChIndx]
+    sampClTmp <- bnRawFiles[(bnRawFiles %in% bnMzXmlFiles) == FALSE & timeChIndx]
     # compare sample file names to .mzXmL files
     SampleConv <- sampleFileNames %in% gsub("\\.mzXML$|\\.mzML$", "", basename(mzXmlFiles))
 
     if(length(rawFiles) > 0){
-    message("Converting to mzXML and initial peak picking: \n",
+    message("Converting to mzXML/mzML and initial peak picking: \n",
             paste(basename(rawFiles), collapse="\n"), "\n")
     flush.console()
-
-    command <- paste0('msconvert "', rawFiles, ifelse(ms2Conv, convTypeMS2, convTypeMS1), mzXmlDir, '"')
+    # if any are ms2 convert differently
+    sampClTmp <- sampleClasses[sampClTmp]
+    ms2Conv <- grepl('MS2', sampClTmp)
+    command <- paste0('msconvert "', rawFiles, ifelse(ms2Conv, convTypeMS2, convTypeMS1),
+                      ifelse(ms2Conv, ms2Dir, mzXmlDir), '"')
     # if nCores not null then convert to mzXML in parallel
     if(!is.null(nCores) & length(command) > 1){
     # testing...
     # pmt <- proc.time()
     # start cluster
+    require(foreach)
+    require(doSNOW)
     message(paste0("Starting SNOW cluster with ", nCores, " local sockets...\n"))
     flush.console()
-    cl <- parallel::makeCluster(nCores)
+    cl <- parallel::makeCluster(nCores, outfile='')
     doSNOW::registerDoSNOW(cl)
     message("Converting raw files and saving in mzXmlFiles directory...\n")
     flush.console()
+    progress <- function(n) cat(paste0(n, ' of ', length(command),
+                                       ' complete (', basename(rawFiles)[n],
+                                       ').\n'))
+    opts <- list(progress=progress)
+
     # foreach and dopar from foreach package
-    outTmp <- foreach(rawF=1:length(command)) %dopar% {system(command[rawF])}
+    outTmp <- foreach(rawF=1:length(command), .options.snow=opts) %dopar% {system(command[rawF])}
     # stop SNOW cluster
     parallel::stopCluster(cl)
     rm(outTmp)
@@ -518,8 +546,16 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     flush.console()
 
     # newly converted file names
-    tmpMzXmlNames <- paste0(mzXmlDir, "/", gsub("\\.d$|\\.RAW$", ifelse(mzXml, '.mzXML', '.mzML'),
-                                                basename(rawFiles)))
+    tmpMzXmlNames <-  dir(mzXmlDir, full.names=TRUE, pattern="\\.mzXML$|\\.mzML$")
+    # have files converted properly (i.e.) file size greater 100 bytes
+    fileSizes <- file.info(tmpMzXmlNames)$size > 100
+    # inform user of files that may not have converted properly
+    if(any(fileSizes == FALSE)){
+      message('The following mzXML files have a file size of less than 100 bytes',
+              ' and may not have converted properly: \n',
+              paste0(basename(tmpMzXmlNames)[fileSizes == FALSE], '\n'))
+    }
+    tmpMzXmlNames <- tmpMzXmlNames[fileSizes]
     # identify xcmsSet.RData file in directory
     xcmsSet_file <- dir(rDataDir, full.names=TRUE, pattern="01\\.xcmsSet\\.RData")
     # if xcmsSet R data file exists then load
@@ -530,6 +566,9 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
       alreadyPPindx <- rownames(tmpXcmsSet@phenoData) %in% gsub('\\.mzXML$|\\.mzML$', '', basename(tmpMzXmlNames))
       # split to remove
       tmpXcmsSet <- split(tmpXcmsSet, f=alreadyPPindx)[[1]]
+
+      alreadyPPindx <- match(gsub('\\.mzXML$|\\.mzML$', '', basename(tmpMzXmlNames)), rownames(tmpXcmsSet@phenoData))
+      tmpMzXmlNames <- tmpMzXmlNames[is.na(alreadyPPindx)]
       # alternatively if a file is not present in the xcmsSet object but there is a
       # mzXML file then add the file to the tmpMzXmlNames vector
      } else {
@@ -570,7 +609,9 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
         }
         # add temporary mzXML file names into xcmsSet arguments list
       xcmsSetArgs$files <- tmpMzXmlNames
-      xcmsSet_tmp <- do.call(xcms::xcmsSet, c(xcmsSetArgs, nCores=nCores))
+      message("Detecting features in ", length(tmpMzXmlNames), " file(s)")
+      flush.console()
+      xcmsSet_tmp <- do.call(xcms::xcmsSet, c(xcmsSetArgs, nSlaves=nCores))
       # if xcmsSet R data file loaded/ tmpXcmsSet exists then concatenate
         if(length(tmpXcmsSet) > 0){
           tmpXcmsSet <- c(tmpXcmsSet, xcmsSet_tmp)
@@ -581,7 +622,9 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
       }
   # add xcmsGroup information into xcmsSet object before saving
   sampleIndx <- match(row.names(tmpXcmsSet@phenoData), sampleFileNames)
-  xcms::sampclass(tmpXcmsSet) <- sampleClasses[sampleIndx]
+  sampClassTmp <- sampleClasses[sampleIndx]
+  sampClassTmp <- ifelse(is.na(sampClassTmp), 'unknown', sampClassTmp)
+  xcms::sampclass(tmpXcmsSet) <- sampClassTmp
   # save xcmsSet class object as RData
   message("Saving 01.xcmsSet.RData file...\n")
   flush.console()
@@ -589,7 +632,7 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
 
   # conduct rest of xcms peak picking and stat analysis if sufficient samples
   # acquired and picked
-  if(length(sampleIndx) >= minFiles){
+  if(sum(grepl('^sample$', sampClassTmp)) >= minFiles){
 
       # further steps of XCMS peak picking
       message("obiwarp retention time correction... \n")
@@ -616,7 +659,7 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
       flush.console()
 
       tmpXcmsSet <- suppressWarnings(xcms::fillPeaks.chrom(tmpXcmsSet,
-                                                           nCores=ifelse(!is.null(nCores),
+                                                           nSlaves=ifelse(!is.null(nCores),
                                                                           nCores, 0)))
       # save zerofilled xcmsSet class object as RData
       message("Saving 04.fillPeaks.RData file...\n")
@@ -625,31 +668,51 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
       save(tmpXcmsSet, file=paste0(rDataDir, "/04.fillPeaks.RData"))
 
       #Create an xsAnnotate object
-      tmpXcmsSet <- xsAnnotate(tmpXcmsSet, polarity = ifelse(ionMode == 'neg', 'negative', 'positive'))
+      tmpXcmsSet <- CAMERA::xsAnnotate(tmpXcmsSet, polarity = ifelse(grepl('neg', ionMode, ignore.case = TRUE), 'negative', 'positive'))
 
       #Group after RT value of the xcms grouped peak
-      tmpXcmsSet <- groupFWHM(tmpXcmsSet, perfwhm=1)
+      tmpXcmsSet <- CAMERA::groupFWHM(tmpXcmsSet, perfwhm=1)
 
       #Verify grouping
       #calcCiS just because then we don't the raw data
-      tmpXcmsSet <- groupCorr(tmpXcmsSet, graphMethod='lpc', pval=0.000001, calcCaS = TRUE,
+      tmpXcmsSet <- CAMERA::groupCorr(tmpXcmsSet, graphMethod='lpc', pval=0.000001, calcCaS = TRUE,
                         cor_exp_th=0.7, cor_eic_th=0.7,calcCiS = FALSE, calcIso = FALSE)
 
       #Annotate isotopes
-      xsaFI <- findIsotopes(xsaC, ppm=10, mzabs=0.01, intval="into")
+      tmpXcmsSet <- CAMERA::findIsotopes(tmpXcmsSet, ppm=10, mzabs=0.01, intval="into")
 
       #Annotate adducts and neutral losses
-      tmpXcmsSet <- findAdducts(tmpXcmsSet, polarity=ifelse(ionMode == 'neg', 'negative', 'positive'),
+      tmpXcmsSet <- CAMERA::findAdducts(tmpXcmsSet, polarity=ifelse(grepl('neg', ionMode, ignore.case = TRUE), 'negative', 'positive'),
                            ppm=10, mzabs=0.01,
                            multiplier=4, rules=cameraRules)
+
+
+      #Generate result
+      message("05.CAMERA.RData file... \n")
+      flush.console()
+
+      save(tmpXcmsSet, file=paste0(rDataDir, "/05.CAMERA.RData"))
+
       #Generate result
       message("01. Saving xcms peak table to 01.peakTables directory... \n")
       flush.console()
 
       # extract matrix of peak values
-      xcmsPeaks <- data.frame(EICno=seq(1, nrow(tmpXcmsSet@groups), 1),
-                              getPeaklist(tmpXcmsSet), stringsAsFactors=FALSE)
+      xcmsPeaks <- data.frame(CAMERA::getPeaklist(tmpXcmsSet), stringsAsFactors=FALSE)
+      xcmsPeaks <- cbind(EICno=as.integer(seq(1, nrow(xcmsPeaks), 1)), xcmsPeaks)
       colnames(xcmsPeaks)[c(2, 5)] <- c('mzmed', 'rtmed')
+      # make sure peak table is in run order according to coVars table
+      # # observation (sample) names
+      obsNames <- row.names(tmpXcmsSet@xcmsSet@phenoData)
+      # sort peak table in to acquisition order if neccessary
+      varCols <- setdiff(colnames(xcmsPeaks), obsNames)
+      acqOrder <- match(obsNames, coVar[, 1])
+      # if missing
+      acqOrder <- zoo::na.spline(acqOrder)
+      obsNames <- obsNames[order(acqOrder)]
+      xcmsPeaks <- xcmsPeaks[, c(varCols, obsNames)]
+      # save raw xcms peaks info for peak monitor after outlier removal and pre-processing
+      xcmsPeaksRaw <- xcmsPeaks
       # padded number of samples for file naming
       nSamplesTmp <- sprintf("%03d", length(sampleIndx))
       # write csv of current peak table if the write attempt does not work then skip and warn user
@@ -667,8 +730,7 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     # begin preprocessing of data
     message("02. Preprocessing peak table...\n")
     flush.console()
-    # observation (sample) names
-    obsNames <- gsub('-', '.', row.names(tmpXcmsSet@phenoData))
+
     # if the sample begins with a number add an X as these will appear with X
     # in data.frame
     # numBeginning <- grepl("^[0-9]", obsNames)
@@ -679,20 +741,25 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     qcIndxTmp <- grep('^QC$', sampleGroups, ignore.case=TRUE)
     # minimum of 4 qcs
     qcNames <- NULL
-    if(length(qcIndxTmp) > 3){
+    if(length(qcIndxTmp) >= 3){
     qcNames <- coVar[sampleIndx[qcIndxTmp], 1]
     samplesIndxTmp <- samplesIndxTmp[samplesIndxTmp < max(qcIndxTmp)]
     blanksIndxTmp <- blanksIndxTmp[blanksIndxTmp < max(qcIndxTmp)]
     }
 
+    blankNames <- NULL
+    if(length(blanksIndxTmp) > 0){
     blankNames <- coVar[sampleIndx[blanksIndxTmp], 1]
-    sampNames <- coVar[sampleIndx[sampleIndxTmp], 1]
+    }
+    sampNames <- coVar[sampleIndx[samplesIndxTmp], 1]
 
-    xcmsPeaks <- preProc(xcmsPeaks, obsNames, sampNames,
-                         qcNames, blankNames, zeroFillValue,
-                         cvThresh, nCores, outputDir = NULL, smoothSpan,
-                         folds = 7, baseLogT = LogTransBase, blankFCmethod = "mean",
-                         blankFCthresh = blankFC, normMethod)
+    xcmsPeaks <- MetMSLine::preProc(xcmsPeaks, obsNames, sampNames,
+                                    qcNames, blankNames, zeroFillValue,
+                                    normMethod, cvThresh, nCores,
+                                    outputDir = NULL, smoothSpan,
+                                    folds = 7, baseLogT = LogTransBase,
+                                    blankFCmethod = "mean",
+                                    blankFCthresh = blankFC)
     # save results
     message("saving pre-processed peak table to 02.preProc directory...\n")
     flush.console()
@@ -702,48 +769,48 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     message("03. PCA projection and score cluster/ batch effect identification...\n")
     flush.console()
     # create a PCA results sub-directory
-    tmpPcaResultsDir <- paste0(pcaDir, "/", nSamplesTmp, "_samples")
+    tmpPcaResultsDir <- paste0(pcaDir, "/", nSamplesTmp, "_files")
     suppressWarnings(dir.create(tmpPcaResultsDir))
     # if the replicates argument is TRUE then combine intensities of replicate
     # injections
-    if(replicates == TRUE){
-    # if necessary change file names
-    tmpObsNames <- gsub('-', '.', sampleFileNames)
-    # if the sample begins with a number add an X as these will appear with X
-    # in data.frame
-    # numBeginning <- grepl("^[0-9]", tmpObsNames)
-    # tmpObsNames[numBeginning] <- paste0("X", tmpObsNames[numBeginning])
-    # identify coVar and xcms peak column names
-    obsIndx <- match(tmpObsNames, colnames(xcmsPeaks))
-    obsTable <- xcmsPeaks[, obsIndx]
-    # row-wise apply duplicate signal averaging
-    message("replicate sample signal averaging...\n")
-    flush.console()
-    repAveraged.df <- t(apply(obsTable, 1, function(Var){
-                        return(tapply(Var, potentialReps, mean))}))
-    repAveraged.df <- as.data.frame(repAveraged.df)
-    # create new obsNames
-    obsNames <- tapply(sampleFileNames, potentialReps, paste, collapse="_")
-    obsNames <- paste0("mean_", obsNames)
-    colnames(repAveraged.df) <- obsNames
-    # replace xcms peak table columns appropriately
-    xcmsPeaks[, obsIndx[1:ncol(repAveraged.df)]] <- repAveraged.df
-    # remove unnecessary columns
-    xcmsPeaks <- xcmsPeaks[, -obsIndx[(ncol(repAveraged.df) + 1):length(obsIndx)]]
-    # add column names
-    colnames(xcmsPeaks)[obsIndx[1:ncol(repAveraged.df)]] <- obsNames
-    # subset coVariates table
-    coVar <- coVar[duplicated(coVar[, 3]) == F, ]
-    # sort table
-    coVar <- coVar[order(coVar[, 3]), ]
-    # add in new names
-    coVar[, 1] <- obsNames
-    }
+    # if(replicates == TRUE){
+    # # if necessary change file names
+    # tmpObsNames <- gsub('-', '.', sampleFileNames)
+    # # if the sample begins with a number add an X as these will appear with X
+    # # in data.frame
+    # # numBeginning <- grepl("^[0-9]", tmpObsNames)
+    # # tmpObsNames[numBeginning] <- paste0("X", tmpObsNames[numBeginning])
+    # # identify coVar and xcms peak column names
+    # obsIndx <- match(tmpObsNames, colnames(xcmsPeaks))
+    # obsTable <- xcmsPeaks[, obsIndx]
+    # # row-wise apply duplicate signal averaging
+    # message("replicate sample signal averaging...\n")
+    # flush.console()
+    # repAveraged.df <- t(apply(obsTable, 1, function(Var){
+    #                     return(tapply(Var, potentialReps, mean))}))
+    # repAveraged.df <- as.data.frame(repAveraged.df)
+    # # create new obsNames
+    # obsNames <- tapply(sampleFileNames, potentialReps, paste, collapse="_")
+    # obsNames <- paste0("mean_", obsNames)
+    # colnames(repAveraged.df) <- obsNames
+    # # replace xcms peak table columns appropriately
+    # xcmsPeaks[, obsIndx[1:ncol(repAveraged.df)]] <- repAveraged.df
+    # # remove unnecessary columns
+    # xcmsPeaks <- xcmsPeaks[, -obsIndx[(ncol(repAveraged.df) + 1):length(obsIndx)]]
+    # # add column names
+    # colnames(xcmsPeaks)[obsIndx[1:ncol(repAveraged.df)]] <- obsNames
+    # # subset coVariates table
+    # coVar <- coVar[duplicated(coVar[, 3]) == F, ]
+    # # sort table
+    # coVar <- coVar[order(coVar[, 3]), ]
+    # # add in new names
+    # coVar[, 1] <- obsNames
+    # }
     # if manBatchAdj column names supplied then manually adjust for batch
     # prior to PCA analysis
     if(!is.null(manBatchAdj)){
 
-    missingValIndx <- (is.na(coVar[, manBatchAdj]) | coVar[, manBatchAdj] == "") == F
+    missingValIndx <- (is.na(coVar[, manBatchAdj]) | coVar[, manBatchAdj] == "") == FALSE
     coVarIndxTmp <- match(obsNames, coVar[missingValIndx, 1])
     obsIndxTmp <- which(!is.na(coVarIndxTmp))
     coVarIndxTmp <- coVar[, 1] %in% obsNames[obsIndxTmp]
@@ -771,7 +838,11 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     # number of pca iterations
     nIterPca <- length(pcaOutResults$pcaResults)
     # create number for PCA indx
-    xcmsGroupScoreIndx <- as.numeric(as.factor(coVar[, 2]))
+    # http://stackoverflow.com/questions/8197559/emulate-ggplot2-default-color-palette
+    gg_color_hue <- function(n) {
+      hues = seq(15, 375, length = n + 1)
+      hcl(h = hues, l = 65, c = 100)[1:n]
+    }
     # save pca plots in results directory
     for(iter in 1:nIterPca){
     # create PNG graphics device
@@ -780,16 +851,32 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     # class id from sample names
     scoreSampNames <- names(pcaOutResults$pcaResults[[iter]]$possOut)
     # from coVar
-    scoreSampNames <- xcmsGroupScoreIndx[match(scoreSampNames, coVar[, 1])]
-    scoreSampNames <- scoreSampNames + 2
+    idxTmp <- match(scoreSampNames, coVar[, 1])
+    colsPcaIt <- rep('darkgrey', length(idxTmp))
+    names(colsPcaIt)[is.na(idxTmp)] <- 'unknown'
+    names(colsPcaIt)[!is.na(idxTmp)] <- coVar[idxTmp[!is.na(idxTmp)], 2]
+    colsPcaIt[grepl('^sample$', names(colsPcaIt))] <- 'black'
+    colsPcaIt[grepl('^blank$', names(colsPcaIt))] <- 'blue'
+    colsPcaIt[grepl('^QC$', names(colsPcaIt))] <- 'red'
+    colsPcaIt[grepl('^ccQC$|^cc$', names(colsPcaIt))] <- 'tomato'
+    remGroups <- unique(names(colsPcaIt[colsPcaIt == 'darkgrey']))
+    remGroups <- remGroups[remGroups != 'unknown']
+    if(length(remGroups) > 0){
+      remColIdx <- match(names(colsPcaIt), remGroups)
+      colsPcaIt[!is.na(remColIdx)] <- gg_color_hue(4 + length(remGroups))[remColIdx[!is.na(remColIdx)] + 4]
+    }
     scoreSampNames[pcaOutResults$pcaResults[[iter]]$possOut] <- 1.5
     # plot 1st two pcs using modified plotPcsEx and colour according to outlier and class
     MetMSLine::plotPcsEx(pcaOutResults$pcaResults[[iter]]$pcaResult,
                          pcaOutResults$pcaResults[[iter]]$exHotEllipse,
                          type="scores",
-                         col=scoreSampNames + 1,
-                         pch=pcaOutResults$pcaResults[[iter]]$possOut + 16,
-                         cex=pcaOutResults$pcaResults[[iter]]$possOut + 1)
+                         col=colsPcaIt, #scoreSampNames + 1,
+                         pch=20, #pcaOutResults$pcaResults[[iter]]$possOut + 16,
+                         cex=pcaOutResults$pcaResults[[iter]]$possOut + 1,
+                         main=paste0("PCA scores - ", nSamplesTmp, ' files (iteration ', iter, ')'))
+    legend("topright", unique(names(colsPcaIt)), col=unique(colsPcaIt), pch = 20,
+           ncol=2, text.col=unique(colsPcaIt),inset = .15)
+
     # close PNG graphics device
     dev.off()
     # save scores
@@ -838,7 +925,7 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     write.csv(outliers, paste0(tmpPcaResultsDir, "/",
                                 length(obsNames) - length(remNames),
                                 "_outliers_", nSamplesTmp,
-                                "_samples.csv"), row.names=F)
+                                "_files.csv"), row.names=FALSE)
     } else {
     message("No outliers were removed therefore no outliers table will be saved in the 03.PCA/",
             basename(tmpPcaResultsDir), " sub-directory...\n")
@@ -848,22 +935,147 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     remNamesCoVar <- coVar[, 1] %in% remNames
     # subset Covariates table
     coVarOutRem <- coVar[remNamesCoVar, , drop=FALSE]
-
+    # sort peak table in to acquisition order if neccessary
+    varCols <- setdiff(colnames(xcmsPeaks), remNames)
+    acqOrder <- match(remNames, coVarOutRem[, 1])
+    sampClTmp <- rep('unknown', length(acqOrder))
+    sampClTmp[!is.na(acqOrder)] <- coVarOutRem[acqOrder[!is.na(acqOrder)], 2]
+    # if missing
+    acqOrder <- zoo::na.spline(acqOrder)
+    remNames <- remNames[order(acqOrder)]
+    sampClTmp <- sampClTmp[order(acqOrder)]
+    qcNames <- remNames[grepl('^QC$', sampClTmp)]
+    xcmsPeaks <- xcmsPeaks[, c(varCols, remNames)]
+    # subset the original raw xcms peaks for peak monitoring
+    rawColNames <- intersect(c(varCols, remNames), colnames(xcmsPeaksRaw))
+    eicIdx <- match(xcmsPeaksRaw$EICno, xcmsPeaks$EICno)
+    xcmsPeaksRaw <- xcmsPeaksRaw[!is.na(eicIdx), rawColNames, drop=FALSE]
     # check peak monitoring
-    if(!is.null(metab)){
+    if(!is.null(metab) & length(qcNames) >= 3){
+      if(is.data.frame(metab)){
+      idxTmp <- match(remNames, coVar[, 1])
+      colsPeakMon <- rep('darkgrey', length(idxTmp))
+      names(colsPeakMon)[is.na(idxTmp)] <- 'unknown'
+      names(colsPeakMon)[!is.na(idxTmp)] <- coVar[idxTmp[!is.na(idxTmp)], 2]
+      labPeakMon <- names(colsPeakMon)
+      colsPeakMon[grepl('^sample$', names(colsPeakMon))] <- 'black'
+      colsPeakMon[grepl('^blank$', names(colsPeakMon))] <- 'blue'
+      colsPeakMon[grepl('^QC$', names(colsPeakMon))] <- 'red'
+      colsPeakMon[grepl('^ccQC$|^cc$', names(colsPeakMon))] <- 'tomato'
+      remGroups <- unique(names(colsPeakMon[colsPeakMon == 'darkgrey']))
+      remGroups <- remGroups[remGroups != 'unknown']
+      if(length(remGroups) > 0){
+        remColIdx <- match(names(colsPeakMon), remGroups)
+        colsPeakMon[!is.na(remColIdx)] <- gg_color_hue(4 + length(remGroups))[remColIdx[!is.na(remColIdx)] + 4]
+      }
     peakMonitorArgs$launchApp <- FALSE
     forbidIdx <- names(peakMonitorArgs) %in% c("ppm", "rtdev", "maxSignalAtt", "percBelow", 'launchApp')
     peakMonitorArgs <- peakMonitorArgs[which(forbidIdx)]
-    peakMonitorArgs$metab <- metab
-    peakMonitorArgs$xcmsOutput <- xcmsPeaks
-    monitPeaks <- do.call(peakMonitor, peakMonitorArgs)
-
+    peakMonitorArgs$xcmsOutput <- xcmsPeaksRaw
+    peakMonitorArgs$obsNames <- remNames
+    peakMonitorArgs$qcNames <- qcNames
+    # check if any duplicate names in metabolite table
+    if(any(dup <- duplicated(metab[, 1]))){
+      for(dupname in unique(metab[dup, 1])) {
+        dupidx <- which(metab[, 1] == dupname)
+        metab[dupidx, 1] <- paste(metab[dupidx, 1], seq(along = dupidx), sep = "__")
+      }
     }
-    # stats analysis
-    statResults <- vector('list', ncol(coVarOutRem) - 1)
-    statResultsBatchAdj <- vector('list', ncol(coVarOutRem) - 1)
+    peakMonitorArgs$metab <- metab
+    peakMonitorArgs$obsTypeStr <- labPeakMon
+    peakMonitorArgs$obsTypeCol <- colsPeakMon
 
-    message("04. statistical analysis, ", length(statResults), " co-variates...\n")
+    monitPeaks <- suppressWarnings(do.call(peakMonitor, peakMonitorArgs))
+    # if necessary send an email
+      if(monitPeaks$warnMessage != ''){
+        outQcs <- setdiff(qcNames[length(qcNames)], emailRec)
+        if(length(outQcs) > 0 & !is.null(emailAddress)){
+
+          body <- paste0(monitPeaks$warnMessage, '\n\n',
+                         paste0(as.vector(t(monitPeaks$summaryTable)), collapse='\n'))
+          # subject
+          subject <- "simExTargId warning: check your LC-MS run - QC signal attenuated."
+          # add angle brackets to email Address
+          emailAddressTmp <- paste0('<', emailAddress, '>')
+          email <- lapply(1:length(emailAddressTmp), function(x){
+            emailTmp <- try(sendmailR::sendmail(from=emailAddressTmp[1],
+                                                to=emailAddressTmp[x],
+                                                subject=subject, msg=body,
+                                                control=mailControl))})
+          # if any error caught then send to console
+          if(class(email) == 'try-error'){
+            warning(attr(email, 'condition')$message)
+          }
+          emailRec <- c(emailRec, outQcs)
+        }
+      }
+    # save to directory
+    peakMonDir <- paste0(outputDir, '/peakMonitor')
+    suppressWarnings(dir.create(peakMonDir))
+    writeCsvAttempt(df=monitPeaks$monitMetab, fileName=paste0(peakMonDir,
+                                                         "/monitorMetaboliteResults.csv"))
+    writeCsvAttempt(df=monitPeaks$summaryTable, fileName=paste0(peakMonDir,
+                                                         "/summaryTable_", nSamplesTmp, "files.csv"))
+     }
+    } # end peak-monitor
+    # stats analysis
+    # 1. reduce number of features by weighted mean of CAMERA pseudospectra
+    sumPcGroup <- table(xcmsPeaks$pcgroup)
+    message(length(sumPcGroup), ' CAMERA pseudospectra identified.\n')
+    flush.console()
+    # summed peak area for weighted mean calculation
+    xcmsPeaks$peakSum <- apply(LogTransBase ^ xcmsPeaks[, remNames, drop=FALSE], 1, sum)
+    # which above min pseudospectrum number
+    sumPcGroup <- sumPcGroup[sumPcGroup >= minFeatPseudo]
+    message(length(sumPcGroup), ' CAMERA pseudospectra consisted of at least n=',
+            minFeatPseudo, ' LC-MS features (minFeatPseudo argument)\n')
+    flush.console()
+
+    deconvDf <- xcmsPeaks[xcmsPeaks$pcgroup %in% names(sumPcGroup), , drop=FALSE]
+    message('Calculating weighted mean for ', length(sumPcGroup), ' CAMERA pseudospectra.\n')
+    flush.console()
+    obsIndx <- which(colnames(deconvDf) %in% remNames)
+
+    deconvDf <- by(deconvDf, deconvDf$pcgroup,
+                     function(x){
+                       wts.tmp <- x[, 'peakSum']
+                       wt.mean.tmp <- apply(x[, obsIndx], 2, function(y){
+                         weighted.mean(LogTransBase ^ y, wts.tmp)
+                       })
+                       maxFeat.indx <- which.max(wts.tmp)
+                       reqCols <- 1:ncol(x)
+                       reqCols <- setdiff(reqCols, obsIndx)
+                       nFeatPspec <- nrow(x)
+                       names(nFeatPspec) <- "nFeatPspec"
+                       wt.mean.tmp <- c(x[maxFeat.indx, reqCols], nFeatPspec,
+                                        wt.mean.tmp)
+                       return(wt.mean.tmp)
+                     })
+    deconvDf <- data.frame(do.call(rbind, deconvDf), stringsAsFactors = FALSE)
+    deconvDf <- data.frame(lapply(deconvDf, as.character),
+                             stringsAsFactors = FALSE)
+    # # remove any remaining isotopes
+    # message('Removing any remaining isotopes from weighted mean table...\n')
+    # flush.console()
+    # deconfDf <- deconvDf[grepl('M\\+') == FALSE, , drop=FALSE]
+    # make EICno integer
+    deconvDf[, 1] <- as.integer(deconvDf[, 1])
+    # log transform
+    deconvDf[, remNames] <- apply(deconvDf[, remNames], 2, as.numeric)
+    deconvDf <- MetMSLine::zeroFill(deconvDf, remNames, zeroFillValue)
+    deconvDf <- MetMSLine::logTrans(deconvDf, remNames, LogTransBase)
+    # save results
+    message("saving weighted mean CAMERA pseudospectra peak table to 02.preProc directory...\n")
+    flush.console()
+    writeCsvAttempt(df=deconvDf, fileName=paste0(preProcDir,
+                                                                "/weightMean_CAMERApseudo_", nSamplesTmp, "files.csv"))
+
+    statRes <- vector('list', ncol(coVarOutRem) - 2)
+    statResWMean <- vector('list', ncol(coVarOutRem) - 2)
+    statResBatchAdj <- vector('list', ncol(coVarOutRem) - 2)
+    statResBatchAdjWMean <- vector('list', ncol(coVarOutRem) - 2)
+
+    message("05. statistical analysis, ", length(statRes), " co-variates...\n")
     flush.console()
     # id covariates with missing or only one value
     missingIndx <- apply(coVarOutRem, 2, function(Var){
@@ -880,15 +1092,15 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     # create logical data frame of missing values
     coVarOutRem_logi <- data.frame(matrix(TRUE, nrow=nrow(coVarOutRem),
                                           ncol=ncol(coVarOutRem)))
-    coVarOutRem_logi[coVarOutRem == ""] <- FALSE
     coVarOutRem_logi[is.na(coVarOutRem)] <- FALSE
+    coVarOutRem_logi[coVarOutRem == ""] <- FALSE
+
     # if nCores then run in parallel
     if(!is.null(nCores)){
-
       # covariate name
       message("co-variate table columns:\n",
-              paste0(colnames(coVarOutRem)[2:ncol(coVarOutRem)], "\n"), "\n",
-              nrow(xcmsPeaks), " multiple comparisons\n")
+              paste0(colnames(coVarOutRem)[3:ncol(coVarOutRem)], "\n"), "\n",
+              nrow(xcmsPeaks), " multiple comparisons pre-processed peak table\n")
       flush.console()
 
       # start cluster
@@ -898,8 +1110,31 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
       doSNOW::registerDoSNOW(cl)
 
       # foreach and dopar from foreach package
-      statResults <- foreach(i=2:ncol(coVarOutRem)) %dopar% {
+      statRes <- foreach(i=3:ncol(coVarOutRem)) %dopar% {
         MetMSLine::coVarTypeStat(peakTable=xcmsPeaks,
+                                 obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
+                                 coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
+                                 base=LogTransBase,
+                                 MTC=pAdjustMethod)
+      }
+      # stop SNOW cluster
+      parallel::stopCluster(cl)
+
+      # covariate name
+      message("co-variate table columns:\n",
+              paste0(colnames(coVarOutRem)[3:ncol(coVarOutRem)], "\n"), "\n",
+              nrow(xcmsPeaks), " multiple comparisons CAMERA pseudospectra weighted mean table\n")
+      flush.console()
+
+      # start cluster
+      message(paste0("Starting SNOW cluster with ", nCores, " local sockets...\n"))
+      flush.console()
+      cl <- parallel::makeCluster(nCores)
+      doSNOW::registerDoSNOW(cl)
+
+      # foreach and dopar from foreach package
+      statResWMean <- foreach(i=3:ncol(coVarOutRem)) %dopar% {
+        MetMSLine::coVarTypeStat(peakTable=deconvDf,
                                  obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
                                  coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
                                  base=LogTransBase,
@@ -917,8 +1152,31 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
         doSNOW::registerDoSNOW(cl)
 
         # foreach and dopar from foreach package
-        statResultsBatchAdj <- foreach(i=2:ncol(coVarOutRem)) %dopar% {
+        statResBatchAdj <- foreach(i=3:ncol(coVarOutRem)) %dopar% {
           MetMSLine::coVarTypeStat(peakTable=batchAdjusted,
+                                   obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
+                                   coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
+                                   base=LogTransBase,
+                                   MTC=pAdjustMethod)
+        }
+        # stop SNOW cluster
+        parallel::stopCluster(cl)
+
+        # covariate name
+        message("co-variate table columns:\n",
+                paste0(colnames(coVarOutRem)[3:ncol(coVarOutRem)], "\n"), "\n",
+                nrow(xcmsPeaks), " multiple comparisons CAMERA pseudospectra weighted mean table\n")
+        flush.console()
+
+        # start cluster
+        message(paste0("Starting SNOW cluster with ", nCores, " local sockets...\n"))
+        flush.console()
+        cl <- parallel::makeCluster(nCores)
+        doSNOW::registerDoSNOW(cl)
+
+        # foreach and dopar from foreach package
+        statResBatchAdjWMean <- foreach(i=3:ncol(coVarOutRem)) %dopar% {
+          MetMSLine::coVarTypeStat(peakTable=deconvDf,
                                    obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
                                    coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
                                    base=LogTransBase,
@@ -930,50 +1188,64 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     # if nSlave null for loop
     } else {
     # create progress bar
-    pb <- txtProgressBar(min=0, max=length(statResults), style=3)
+    pb <- txtProgressBar(min=0, max=length(statRes), style=3)
 
-    for(i in 2:ncol(coVarOutRem)){
+    for(i in 3:ncol(coVarOutRem)){
       # set progress bar
-      setTxtProgressBar(pb, i - 1)
+      setTxtProgressBar(pb, i)
       message("co-variate table column: ", colnames(coVarOutRem)[i], ", ",
               nrow(xcmsPeaks), " multiple comparisons")
       flush.console()
       # auto select coVariate type
-      statResults[[i - 1]] <- MetMSLine::coVarTypeStat(xcmsPeaks,
-                                                       obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
-                                                       coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
-                                                       base=LogTransBase,
-                                                       MTC=pAdjustMethod)
+      statRes[[i - 2]] <- MetMSLine::coVarTypeStat(xcmsPeaks,
+                                                   obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
+                                                   coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
+                                                   base=LogTransBase,
+                                                   MTC=pAdjustMethod)
+      statResWMean[[i - 2]] <- MetMSLine::coVarTypeStat(deconvDf,
+                                                        obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
+                                                        coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
+                                                        base=LogTransBase,
+                                                        MTC=pAdjustMethod)
       # if necessary then stats analysis batchadjusted data
       if(length(batchAdjusted) > 0){
         message("Batch Adjusted, co-variate table column: ", colnames(coVarOutRem)[i], ", ",
                 nrow(xcmsPeaks), " multiple comparisons")
         flush.console()
 
-      statResultsBatchAdj[[i - 1]] <- MetMSLine::coVarTypeStat(batchAdjusted,
-                                                               obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
-                                                               coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
-                                                               base=LogTransBase,
-                                                               MTC=pAdjustMethod)
+      statResBatchAdj[[i - 2]] <- MetMSLine::coVarTypeStat(batchAdjusted,
+                                                           obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
+                                                           coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
+                                                           base=LogTransBase,
+                                                           MTC=pAdjustMethod)
+      statResBatchAdjWMean[[i - 2]] <- MetMSLine::coVarTypeStat(batchAdjusted,
+                                                                obsNames=coVarOutRem[coVarOutRem_logi[, i], 1],
+                                                                coVariate=coVarOutRem[coVarOutRem_logi[, i], i],
+                                                                base=LogTransBase,
+                                                                MTC=pAdjustMethod)
+
       } # cond batch adjusted
     } # end single thread for loop
     } # end parallel cond
     # saving statistical analysis objects (.RData)...
     message('saving statistical analysis objects (.RData) in RDataFiles directory...')
     flush.console()
-    save(statResults, file=paste0(rDataDir, "/statResults.RData"))
+    save(statRes, file=paste0(rDataDir, "/statResults.RData"))
+    save(statResWMean, file=paste0(rDataDir, "/statResults_weightMean.RData"))
+
     # if necessary save batch adjusted statistical test results
     if(length(batchAdjusted) > 0){
       message('saving batch adjusted statistical analysis objects (.RData) in RDataFiles directory...')
       flush.console()
-      save(statResultsBatchAdj, file= paste0(rDataDir, "/statResultsBatchAdj.RData"))
+      save(statResBatchAdj, file= paste0(rDataDir, "/statResultsBatchAdj.RData"))
+      save(statResBatchAdjWMean, file= paste0(rDataDir, "/statResultsBatchAdj_weightMean.RData"))
     }
 
     # covar names
-    coVarNames <- colnames(coVarOutRem)[2:ncol(coVarOutRem)]
+    coVarNames <- colnames(coVarOutRem)[3:ncol(coVarOutRem)]
     # add stat results output to peak table
-    statResults <- do.call(cbind, lapply(1:length(statResults), function(x){
-          statResTmp <- statResults[[x]]
+    statRes <- do.call(cbind, lapply(1:length(statRes), function(x){
+          statResTmp <- statRes[[x]]
           if(!is.character(statResTmp)){
           colNamesTmp <- paste(statResTmp$method, statResTmp$MTC, coVarNames[x],
                                sep="_")
@@ -981,19 +1253,28 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
           colnames(resDfTmp) <- paste0(colnames(resDfTmp), "_", colNamesTmp)
           return(resDfTmp)
           }}))
+    statResWMean <- do.call(cbind, lapply(1:length(statResWMean), function(x){
+      statResTmp <- statResWMean[[x]]
+      if(!is.character(statResTmp)){
+        colNamesTmp <- paste(statResTmp$method, statResTmp$MTC, coVarNames[x],
+                             sep="_")
+        resDfTmp <- statResTmp$result
+        colnames(resDfTmp) <- paste0(colnames(resDfTmp), "_", colNamesTmp)
+        return(resDfTmp)
+      }}))
 
     # insert stats analysis into peak table
     obsIndx <- match(coVarOutRem[, 1], colnames(xcmsPeaks))
     # remaining columns
     remColsIndx <- setdiff(1:ncol(xcmsPeaks), obsIndx)
     # insert stats res and write to results directory
-    statResults <- data.frame(xcmsPeaks[, remColsIndx], statResults,
-                              xcmsPeaks[, obsIndx], stringsAsFactors=F)
+    statRes <- data.frame(xcmsPeaks[, remColsIndx], statRes,
+                              xcmsPeaks[, obsIndx], stringsAsFactors=FALSE)
     # if necessary extract batch adjusted test results
     if(length(batchAdjusted) > 0){
-      statResultsBatchAdj <- do.call(cbind, lapply(1:length(statResultsBatchAdj),
+      statResBatchAdj <- do.call(cbind, lapply(1:length(statResBatchAdj),
                                                    function(x){
-          statResTmp <- statResultsBatchAdj[[x]]
+          statResTmp <- statResBatchAdj[[x]]
           if(!is.character(statResTmp)){
           colNamesTmp <- paste("batchAdj", statResTmp$method, statResTmp$MTC, coVarNames[x],
                                sep="_")
@@ -1002,45 +1283,53 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
           return(resDfTmp)
           }}))
       # insert stats res and write to results directory
-      statResultsBatchAdj <- data.frame(xcmsPeaks[, remColsIndx],
-                                        statResultsBatchAdj, xcmsPeaks[, obsIndx],
-                                        stringsAsFactors=F)
+      statResBatchAdj <- data.frame(xcmsPeaks[, remColsIndx],
+                                        statResBatchAdj, xcmsPeaks[, obsIndx],
+                                        stringsAsFactors=FALSE)
     } # cond batch adjusted
-     # deconv data using RtCorrClust
-     message("deconvoluting xcms peak data by retention time and correlation clustering...\n")
-     flush.console()
 
-     statResults <- MetMSLine::rtCorrClust(statResults, coVarOutRem[, 1],
-                                           corrThresh=corrThresh,
-                                           minFeat=minFeat,
-                                           hclustMethod=hclustMethod,
-                                           distMeas=distMeas)
+    # insert stats analysis into peak table
+    obsIndx <- match(coVarOutRem[, 1], colnames(deconvDf))
+    # remaining columns
+    remColsIndx <- setdiff(1:ncol(deconvDf), obsIndx)
+    # insert stats res and write to results directory
+    statResWMean <- data.frame(deconvDf[, remColsIndx], statResWMean,
+                               deconvDf[, obsIndx], stringsAsFactors=FALSE)
+
+    if(length(batchAdjusted) > 0){
+      statResBatchAdjWMean <- do.call(cbind, lapply(1:length(statResBatchAdjWMean),
+                                               function(x){
+                                                 statResTmp <- statResBatchAdjWMean[[x]]
+                                                 if(!is.character(statResTmp)){
+                                                   colNamesTmp <- paste("batchAdj", statResTmp$method, statResTmp$MTC, coVarNames[x],
+                                                                        sep="_")
+                                                   resDfTmp <- statResTmp$result
+                                                   colnames(resDfTmp) <- paste0(colnames(resDfTmp), "_", colNamesTmp)
+                                                   return(resDfTmp)
+                                                 }}))
+      # insert stats res and write to results directory
+      statResBatchAdjWMean <- data.frame(deconvDf[, remColsIndx],
+                                         statResBatchAdj, deconvDf[, obsIndx],
+                                         stringsAsFactors=FALSE)
+      } # cond batch adjusted
+
 
      message("Writing statistical results output, ", nSamplesTmp, " samples...\n")
      flush.console()
      # write csv results
-     writeCsvAttempt(df=statResults[[1]], fileName=paste0(statsDir,
-                                                          "/statResults.csv"))
-     writeCsvAttempt(df=statResults[[2]], fileName=paste0(statsDir, "/statResults_wMean.csv"))
-    message("...done\n")
-    flush.console()
+     writeCsvAttempt(df=statRes, fileName=paste0(statsDir, "/statResults.csv"))
+     writeCsvAttempt(df=statResWMean, fileName=paste0(statsDir, "/statResults_wMean.csv"))
+     message("...done\n")
+     flush.console()
 
     if(length(batchAdjusted) > 0){
-      message("deconvoluting batch adjusted xcms peak data by retention time and correlation clustering...\n")
-      flush.console()
 
-      statResultsBatchAdj <- MetMSLine::rtCorrClust(statResultsBatchAdj, coVarOutRem[, 1],
-                                                  corrThresh=corrThresh,
-                                                  minFeat=minFeat,
-                                                  hclustMethod=hclustMethod,
-                                                  distMeas=distMeas)
-
-    message("Writing batch adjusted statistical results output, ", nSamplesTmp, " samples...\n")
+    message("Writing batch adjusted statistical results output, ", nSamplesTmp, " files...\n")
     flush.console()
     # write csv results
-    writeCsvAttempt(df=statResultsBatchAdj[[1]], fileName=paste0(statsDir,
+    writeCsvAttempt(df=statResBatchAdj, fileName=paste0(statsDir,
                                                          "/statResults_BatchAdj.csv"))
-    writeCsvAttempt(df=statResultsBatchAdj[[2]], fileName=paste0(statsDir, "/statResults_BatchAdj_wMean.csv"))
+    writeCsvAttempt(df=statResBatchAdjWMean, fileName=paste0(statsDir, "/statResults_BatchAdj_wMean.csv"))
 
     message("...done\n")
     flush.console()
@@ -1054,18 +1343,18 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
     } # cond if any samples in covar table have been converted/ peak picked
   } # cond if any raw files have not yet been converted/ peak picked
   # if all samples mzXML converted and peak picked then break while loop
-  if(all(SampleConv == T)){
-
-  message("Generating final diffreport and EICs...\n")
-  flush.console()
-  setwd(rDataDir)
-  # generate diff report
-  suppressWarnings(do.call(xcms::diffreport, xcmsDiffRepArgs))
-
-  message("finished...\n")
-  flush.console()
-  break
-  }
+  # if(all(SampleConv == T)){
+  #
+  # message("Generating final diffreport and EICs...\n")
+  # flush.console()
+  # setwd(rDataDir)
+  # # generate diff report
+  # suppressWarnings(do.call(xcms::diffreport, xcmsDiffRepArgs))
+  #
+  # message("finished...\n")
+  # flush.console()
+  # break
+  # }
 } # end while loop
 } else {
   message("all of the samples have already been converted to mzXML files stopping")

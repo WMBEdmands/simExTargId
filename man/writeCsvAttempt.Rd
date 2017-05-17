@@ -14,4 +14,3 @@ writeCsvAttempt(df = NULL, fileName = NULL)
 \description{
 try to write a csv and pause and alert user if open
 }
-

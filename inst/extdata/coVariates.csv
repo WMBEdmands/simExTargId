@@ -1,7 +1,10 @@
-FileName,class,replicateInjection,runOrder
-05blank,blank,1,5
-09blank,blank,1,9
-13blank,blank,1,13
-18-IPAHG1,plasma,2,18
-19-IPAHG2,plasma,2,19
-20-IPAHG3,plasma,2,20
+FileName,sampleType,replicateInjection,runOrder
+qc01,QC,3,1
+sample01,sample,2,2
+blank01,blank,1,3
+sample02,sample,2,4
+qc02,QC,3,5
+blank02,blank,1,6
+sample03,sample,2,7
+blank03,blank,1,8
+qc03,QC,3,9

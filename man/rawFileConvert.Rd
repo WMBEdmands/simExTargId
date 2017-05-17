@@ -4,8 +4,8 @@
 \alias{rawFileConvert}
 \title{Convert proprietory instrument manufacturer file types to .mzXML files}
 \usage{
-rawFileConvert(rawFiles = NULL, mzXmlDir = NULL, nSlaves = NULL,
-  subSetSecs = NULL, zlib = T, centroid = TRUE, MS2 = FALSE)
+rawFileConvert(rawFiles = NULL, mzXmlDir = NULL, nCores = NULL,
+  subSetSecs = NULL, zlib = TRUE, centroid = TRUE, MS2 = FALSE)
 }
 \arguments{
 \item{rawFiles}{character vector of full path names to raw data files.}
@@ -13,9 +13,9 @@ rawFileConvert(rawFiles = NULL, mzXmlDir = NULL, nSlaves = NULL,
 \item{mzXmlDir}{character full path to directory into which to write the mzXml
 files output by MSConvert.}
 
-\item{nSlaves}{numeric number of computer cores for parallel computation.}
+\item{nCores}{numeric number of computer cores for parallel computation.}
 
-\item{subSetSecs}{numeric vector of a minimum and maximum time window in 
+\item{subSetSecs}{numeric vector of a minimum and maximum time window in
 mzXML files (e.g. c(1500, 1900)).}
 
 \item{zlib}{logical whether or not to apply zlib compression (default = TRUE). Will reduce
@@ -32,11 +32,10 @@ as MS/MS files (e.g. data-dependent MS/MS files).}
 Convert proprietory instrument manufacturer file types to .mzXML files
 }
 \details{
-MSConvert (ProteoWizard \url{http://proteowizard.sourceforge.net/downloads.shtml}) 
+MSConvert (ProteoWizard \url{http://proteowizard.sourceforge.net/downloads.shtml})
 must be installed and in the case of windows
 in the path in the environmental variables. The mzXML file conversion will occur
 through shell commands using the command line version of MSConvert. If more than
 one cpu is utilized the mzXML file conversion process will occur as a parallel
 computation.
 }
-

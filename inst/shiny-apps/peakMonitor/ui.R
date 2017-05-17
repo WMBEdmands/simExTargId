@@ -1,13 +1,13 @@
 # UI
 peakMonitUi <- shinyUI(fluidPage(
-  titlePanel(paste0("Peak Monitor app (", basename(xcmsOutFileName), ")")),
+  titlePanel(paste0("Peak Monitor app")),
   sidebarLayout(
     sidebarPanel(h4("Peak Monitor options:"),
-                 
-                 selectInput("Compound",label=tags$b("Select the name of the compound to display :"),choices=c("MeanAllCompounds", exMetab$name)),
+
+                 selectInput("Compound",label=tags$b("Select the name of the compound to display :"), choices=c("MeanAllCompounds", exMetab$name)),
                  # selectInput("Result_type",label=tags$b("Select the xcms result type to display :"),choices=c(xcms_results_colnames)),
                  selectInput("Exclude",label=tags$b("Select any samples you wish to exclude:"), choices=c(obsNames), multiple=T)),
-    
+
     mainPanel(h4("Peak monitoring table and plot"), width=8,
               # ggvis::ggvisOutput("exMetabPlot"),
               DT::dataTableOutput('exMetabTable'),
@@ -27,7 +27,7 @@ peakMonitUi <- shinyUI(fluidPage(
               # (textOutput("Retention_time")),
               # tags$br(),
               shiny::h4("PCA monitored metabolites"),
-              shiny::radioButtons("pcaPlotType", label="PCA plot type:", 
+              shiny::radioButtons("pcaPlotType", label="PCA plot type:",
                                   choices=c("scores", "loadings")),
               shiny::plotOutput('pcaPlot1', brush='pcaPlot1_brush',
                                 width = "100%",  height = "600px")
@@ -36,7 +36,7 @@ peakMonitUi <- shinyUI(fluidPage(
               # h5(strong("PCA all features (loadings)")),
               # showOutput("PCA_plot_loadings","polycharts")
     )
-    
+
   )
-  
+
 )) # end ui
