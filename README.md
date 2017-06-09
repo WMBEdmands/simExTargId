@@ -6,7 +6,7 @@ The R package utilizes MSConvert ([ProteoWizard](http://proteowizard.sourceforge
 A main impetus for development of this package was to provide an email-based early warning system for LC-MS instrumental stoppages/errors but also for more subtle changes such as instrument drift and (PCA-based) outlying pooled quality control samples for example. When collecting a dataset of precious/limited samples such as those with a low volume/quantity provided (e.g. mouse sera, dried blood spot punches) it can be particularly poignant if un-noticed instrumental stoppages leads to degradation of your samples or unwanted variation/batch effects.
 Instrumental drifts and potentially MS2 targets can be identified in real time using the two shiny apps developed for **simExTargId** *peakMonitor* and *targetId*.
 
-Narrowing the gap to truly "online" target feature MS2 fragmentation is also a primary goal of **simExTargId**. 
+Narrowing the temporal gap to truly "online" target feature MS2 fragmentation is also a primary goal of **simExTargId**. 
 
 All peak-picking, retention time alignment and grouping is performed by [xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html), then ESI adducts and isotopes detected by [CAMERA](https://bioconductor.org/packages/release/bioc/html/CAMERA.html) in real time. Following this pre-processing of the peak-table is performed by [MetMSLine](https://github.com/WMBEdmands/MetMSLine). Automatic PCA-based outlier detection is performed and a warning email sent to user(s) if a QC sample is outlying. Furthermore, automatic real-time univariate co-variate based statistical analysis is then performed. 
 
