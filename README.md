@@ -1,6 +1,21 @@
 # simExTargId (v0.2.0)
 Performs simultaneous raw data to mzXML conversion ([MSConvert](http://proteowizard.sourceforge.net/)), peak-picking, retention time alignment, grouping ([xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html)), ESI adducts/in-source fragment artefact identification ([CAMERA](https://bioconductor.org/packages/release/bioc/html/CAMERA.html)), peak table output pre-processing, automatic outlier detection by PCA and automatic  statistical analysis dependent on co-variates supplied ([MetMSLine](https://github.com/WMBEdmands/MetMSLine)), signal drift monitoring and possible MS2 target list identification and real-time shiny-based visualizations are also available during a metabolomic profiling experiment.
 
+## Installation
+Install the latest development version and all package dependencies in one-line of code directly from GitHub using the devtools package. First ensure devtools is installed, instructions can be found here: https://github.com/hadley/devtools
+```{r}
+devtools::install_github('WMBEdmands/simExTargId', dependencies=c("Depends", "Imports", "Suggests"))
+```
+
+## Vignette
+The vignette can be viewed here with example raw data acquired on a Thermo FT-ICR mass spectrometer (this requires playing with the creation time of the raw data files to simulate a real-time data collection):
+
+[HTMLvignette](http://bit.ly/2rUQSAk)
+
+**simExTargId** has so far only been tested with Agilent (.d) and Thermo (.RAW/.raw) data files but depending on interest could be readily extended to other instrument manufacturers. 
+
+## Details 
+
 The R package utilizes MSConvert ([ProteoWizard](http://proteowizard.sourceforge.net/)), [xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html), [CAMERA](https://bioconductor.org/packages/release/bioc/html/CAMERA.html), [MetMSLine](https://github.com/WMBEdmands/MetMSLine), [Shiny](https://shiny.rstudio.com/) and many other packages to attempt to implement real-time **sim**ultaneous metabolomic MS1-profiling **Ex**perimentation and statistically relevant MS2 **Targ**et **Id**entification.
 
 A main impetus for development of this package was to provide an email-based early warning system for LC-MS instrumental stoppages/errors but also for more subtle changes such as instrument drift and (PCA-based) outlying pooled quality control samples for example. When collecting a dataset of precious/limited samples such as those with a low volume/quantity provided (e.g. mouse sera, dried blood spot punches) it can be particularly poignant if un-noticed instrumental stoppages leads to degradation of your samples or unwanted variation/batch effects.
@@ -13,12 +28,6 @@ All peak-picking, retention time alignment and grouping is performed by [xcms](h
 The **simExTargId** workflow can be left running during the MS1-profiling data collection providing a degree of reassurance that serious instrumental difficulties will not go unnoticed (even whilst present in the laboratory and otherwise distracted) and also outlying samples and statistically relevant LC-MS feature target can be identified and additional experiments/reinjections appended to the experimental worklist before the end.
 
 **SimExTargId** also attempts to inculcate a rigorous (and broadly accepted) experimental design and also a organizational directory sub-structure for an experiment, helping to organize data and files for the user. Sub-directories, tables and plots are then generated in real time. For example, each time a new iteration of **simExTargId** takes place updated PCA plots and tables will appear in each sub-directory. The idea is to preserve the reproducibility by the recording of parameters used (and session information) and providing an easy to navigate and intuitive sub-directory structure.
-
-The vignette can be viewed here with example raw data acquired on a Thermo FT-ICR mass spectrometer (this requires playing with the creation time of the raw data files to simulate a real-time data collection):
-
-[HTMLvignette](http://bit.ly/2rUQSAk)
-
-**simExTargId** has so far only been tested with Agilent (.d) and Thermo (.RAW/.raw) data files but depending on interest could be readily extended to other instrument manufacturers. 
 
 A technical note describing the package is currently under-review and awaiting decision in the journal *Bioinformatics*.
 
