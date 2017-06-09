@@ -15,6 +15,7 @@ The **simExTargId** workflow can be left running during the MS1-profiling data c
 **SimExTargId** also attempts to inculcate a rigorous (and broadly accepted) experimental design and also a organizational directory sub-structure for an experiment, helping to organize data and files for the user. Sub-directories, tables and plots are then generated in real time. For example, each time a new iteration of **simExTargId** takes place updated PCA plots and tables will appear in each sub-directory. The idea is to preserve the reproducibility by recording of parameters used (and session information) and providing an easy to navigate and intuitive sub-directory structure.
 
 The vignette can be viewed here with example raw data acquired on a Thermo FT-ICR mass spectrometer (this requires playing with the creation time of the raw data files to simulate a real-time data collection):
+[HTMLvignette](http://bit.ly/2rUQSAk)
 
 **simExTargId** has only been tested with Agilent (.d) and Thermo (.RAW/.raw) raw data files but depending on interest could be easily extended to other instrument manufacturers. 
 
