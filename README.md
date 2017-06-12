@@ -35,4 +35,8 @@ The **simExTargId** workflow can be left running during the MS1-profiling data c
 
 A technical note describing the package is currently under-review and awaiting decision until then if you use *simExTargId* please cite the DOI provided by the Zenodo archive.
 
+Licence
+=============
+The **simExTargId** package is licenced under the GPLv3 (http://www.gnu.org/licenses/gpl.html).
+
  
