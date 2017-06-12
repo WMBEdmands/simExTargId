@@ -1,6 +1,6 @@
 Package: simExTargId
 Title: Simultaneous peak-picking and MS2 target identification using XCMS.
-Version: 0.2.0
+Version: 0.2.1
 Author: Will Edmands <edmandsw@berkeley.edu>
 Description: Performs simultaneous raw data to mzXML conversion (MSconvert),
     peak-picking, statistics, visualization and possible MS2 target list
@@ -8,7 +8,7 @@ Description: Performs simultaneous raw data to mzXML conversion (MSconvert),
 Depends:
 	R (>= 3.3.3)
 Imports:
-	shiny (>= 1.0.2),
+	shiny (>= 1.0.3),
 	DT (>= 0.2),
 	sendmailR (>= 1.2.1),
 	xcms (>= 1.50.1),
