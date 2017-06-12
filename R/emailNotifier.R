@@ -1,18 +1,29 @@
 #' email notification system for LC-MS analyses
 #' @param rawDir character full path name of raw data directory into which raw data will
 #' eventually/ has already been started to be written.
-#' @param emailTime numeric length of time (in minutes) after the last raw data
-#' file was written before an email notification will be sent. minimum value is 5 minutes.
-#' @param mailControl List of SMTP server settings see \code{\link{sendmail}} for details.
-#' Example given is for google mail.
 #' @param emailAddress character email address from and to which to send warning email
 #' that run may have stopped. (if not supplied then email notification will not be sent)
 #' see \code{\link{sendmail}}.
+#' @param emailTime numeric length of time (in minutes) after the last raw data
+#' file was written before an email notification will be sent. minimum value is 5 minutes.
+#' @param maxTime numeric the maximum time before the email notifier process will stop
+#' altogether so it does not continue ad infinitum and the eventual return of
+#' the cosmos to a state of maximum entropy (default = 60 mins).
+#' @param mailControl List of SMTP server settings see \code{\link{sendmail}} for details.
+#' Example given is for google mail.
+#' @param minFiles integer the minimum number of files that must be collected
+#' before the median absolute deviation is calculated (default = 5).
+#' @param nMad numeric the number of median absolute deviations smaller a file
+#' must be for an email warning to be sent (default = 3). Reducing this
+#' value may make it more sensitive to subtle reductions in file size but increase
+#' the risk of false positive warning email messages. Utilizes the base function
+#' \link{mad} in the stats package.
 #'
 #' @export
 emailNotifier <- function(rawDir=NULL, emailAddress=NULL, emailTime=10,
                           maxTime=60,
-                          mailControl=list(smtpServer="ASPMX.L.GOOGLE.COM")){
+                          mailControl=list(smtpServer="ASPMX.L.GOOGLE.COM"),
+                          minFiles=5, nMad=3){
   # error handling
   if(is.null(emailAddress)){
     stop('emailAddress argument is missing with no default')
@@ -122,18 +133,18 @@ emailNotifier <- function(rawDir=NULL, emailAddress=NULL, emailTime=10,
     }
 
     # if file sizes greater than 3 median absolute deviations from median after min 5 files then email
-    if(length(fileSizes) > 5){
+    if(length(fileSizes) > minFiles){
     madFS <- mad(fileSizes)
     medFS <- median(fileSizes)
-    loOut <- medFS - {3 * madFS}
+    loOut <- medFS - {nMad * madFS}
     if(any(outFileSize <- fileSizes <= loOut)){
       outSizeTmp <- basename(finishedFiles[outFileSize])
       outSizeTmp <- setdiff(outSizeTmp, emailSentSize)
       if(length(outSizeTmp) > 0){
         # if email address supplied then send a warning to that email, from that email
         # email body
-        body <- paste0('The file sizes of the following completed raw data file\n ', outSizeTmp,
-                       ' is greater than 3 median absolute deviations smaller than the median file size. please check your LC-MS run.')
+        body <- paste0('The file size of the following completed raw data file\n ', outSizeTmp,
+                       ' is less than ', nMad, ' median absolute deviations smaller than the median file size. please check your LC-MS run.')
         # subject
         subject <- "simExTargId warning: check your LC-MS run (small file size)!"
         # add angle brackets to email Address
@@ -151,11 +162,11 @@ emailNotifier <- function(rawDir=NULL, emailAddress=NULL, emailTime=10,
       }
      }
     }
+    }
     # if longer than an hour then stop the process.
     if(lastFile > maxTime){
       stop("The last raw data file was written longer than an hour ago...stopping the email notification process")
       break
-     }
     }
   }
 }# end function

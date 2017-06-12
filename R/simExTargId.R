@@ -75,7 +75,7 @@
 #'  statistical analysis and feature deconvolution (\code{\link{coVarStatType}},
 #'   \code{\link{rtCorrClust}}). The data output of the workflow can be
 #'   visualized by a shiny application (\code{\link{shiny}}) at any time
-#'   (\code{\link{targIdShiny}}) and MSn fragmentation targets rapidly identified.
+#'   (\code{\link{targetId}}) and MS2 fragmentation targets rapidly identified.
 #'
 #'  The function works according to the following process:
 #'
@@ -94,6 +94,7 @@
 #'  in this column for Good Laboratory Practice (GLP) and ideal
 #'  metabolomic experimental design. The only mandatory injection/run type name
 #'  is "sample" (not case-sensitive), simExTargId will stop if this is not found in the second column.
+#'
 #'  This will direct simExTargId to perform statistical analysis on samples only for which
 #'  co-variates are available in columns 3 -  total number of columns.
 #'   In order to use the full functionality of simExTargId it is also suggested that
@@ -108,7 +109,7 @@
 #'  supplied.
 #'
 #'  In order to distinguish a column conditioning QC from a regular QC sample
-#'  the suffix "cc" should be added to the name "QC". If a QC is not used for
+#'  the prefix "cc" should be added to the name "QC". If a QC is not used for
 #'  column conditioning then just "cc" (not case-sensitive) is sufficient. These
 #'  will not be monitored by the peakMonitor of pcaOutId functions.
 #'
@@ -148,9 +149,9 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
                         smoothSpan=0.8, cvThresh=30, blankFC=2,
                         replicates=FALSE, pAdjustMethod="BH",
 
-                        bw=2, mzwid=0.015, minfrac=0.25,
-                        xcmsSetArgs=list(peakwidth=c(5, 20), ppm=10, snthresh=5,
+                         xcmsSetArgs=list(peakwidth=c(5, 20), ppm=10, snthresh=5,
                                          method="centWave"),
+                        bw=2, mzwid=0.015, minfrac=0.25,
                         pcaOutIdArgs=list(cv="q2", scale="pareto", centre=TRUE),
                         peakMonitorArgs=list(ppm=10, rtdev=30, maxSignalAtt=20,
                                              percBelow=20),
@@ -169,11 +170,11 @@ simExTargId <- function(rawDir=NULL, studyName='exampleStudyName',
   }
 
   # file conversion type (i.e. data dependent/independent) if necessary
-  convTypeMS1 <- paste0('" --32 --', ifelse(mzXml, 'mzXML', 'mzML'),
+  convTypeMS1 <- paste0('" --32 --zlib --', ifelse(mzXml, 'mzXML', 'mzML'),
                         ' --filter "', ifelse(centroid, 'peakPicking true 1-"',
                                               'msLevel 1-"'), ' -o "')
 
-  convTypeMS2 <- paste0('" --32 --', ifelse(mzXml, 'mzXML', 'mzML'),
+  convTypeMS2 <- paste0('" --32 --zlib --', ifelse(mzXml, 'mzXML', 'mzML'),
                         ' --filter "', ifelse(centroid, 'peakPicking true 1-2"',
                                               'msLevel 1-2"'), ' -o "')
 
