@@ -1,6 +1,6 @@
 # simExTargId 
 
-[![DOI](https://zenodo.org/badge/57997482.svg)](https://zenodo.org/badge/latestdoi/57997482) Development version 0.2.1 archived on the Zenodo repository. 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.806838.svg)](https://doi.org/10.5281/zenodo.806838) Development version 0.2.1 archived on the Zenodo repository. 
 
 Performs simultaneous raw data to mzXML conversion ([MSConvert](http://proteowizard.sourceforge.net/)), peak-picking, retention time alignment, grouping ([xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html)), ESI adducts/in-source fragment artefact identification ([CAMERA](https://bioconductor.org/packages/release/bioc/html/CAMERA.html)), peak table output pre-processing, automatic outlier detection by PCA and automatic  statistical analysis dependent on co-variates supplied ([MetMSLine](https://github.com/WMBEdmands/MetMSLine)), signal drift monitoring and possible MS2 target list identification and real-time shiny-based visualizations are also available during a metabolomic profiling experiment. An email notification system using the [sendmailR](https://cran.r-project.org/web/packages/sendmailR/index.html)
 package is implemented in **simExTargId** to warn the user(s) of instrumental stoppages and drift. The **simExTargId** package is still in active development but nevertheless should still be at a functional and useful stage for many metabolomic investigators.
