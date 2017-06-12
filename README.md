@@ -12,7 +12,7 @@ The vignette can be viewed here with example raw data acquired on a Thermo FT-IC
 
 [HTMLvignette](http://bit.ly/2rUQSAk)
 
-**simExTargId** has so far only been tested with Agilent (.d) and Thermo (.RAW/.raw) data files but depending on interest could be readily extended to other instrument manufacturers. 
+**simExTargId** has so far only been tested with Agilent (.d) and Thermo (.RAW/.raw) data files on a computer running Windows but depending on interest could be readily extended to other instrument manufacturers and may well already function on an OSX or Linux based operating system.
 
 ## Details 
 
