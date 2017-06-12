@@ -29,6 +29,6 @@ The **simExTargId** workflow can be left running during the MS1-profiling data c
 
 **SimExTargId** also attempts to inculcate a rigorous (and broadly accepted) experimental design and also a organizational directory sub-structure for an experiment, helping to organize data and files for the user. Sub-directories, tables and plots are then generated in real time. For example, each time a new iteration of **simExTargId** takes place updated PCA plots and tables will appear in each sub-directory. The idea is to preserve the reproducibility by the recording of parameters used (and session information) and providing an easy to navigate and intuitive sub-directory structure.
 
-A technical note describing the package is currently under-review and awaiting decision.
+A technical note describing the package is currently under-review and awaiting decision until then if you use *simExTargId* please cite the DOI provided by the Zenodo archive.
 
  
