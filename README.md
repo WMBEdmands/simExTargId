@@ -12,9 +12,7 @@ devtools::install_github('WMBEdmands/simExTargId', dependencies=c("Depends", "Im
 ```
 
 ## Vignette
-The vignette can be viewed here with example raw data acquired on a Thermo FT-ICR mass spectrometer (this requires playing with the creation time of the raw data files to simulate a real-time data collection):
-
-[HTMLvignette](http://bit.ly/2rUQSAk)
+The vignette can be viewed [here](http://bit.ly/2rUQSAk) with example raw data acquired on a Thermo FT-ICR mass spectrometer (this requires playing with the creation time of the raw data files to simulate a real-time data collection).
 
 **simExTargId** has so far only been tested with Agilent (.d) and Thermo (.RAW/.raw) data files on a computer running Windows but depending on interest could be readily extended to other instrument manufacturers and may well already function on an OSX or Linux based operating system.
 
