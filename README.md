@@ -28,9 +28,14 @@ Narrowing the temporal gap to truly "online" target feature MS2 fragmentation is
 All peak-picking, retention time alignment and grouping is performed by [xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html), then ESI adducts and isotopes detected by [CAMERA](https://bioconductor.org/packages/release/bioc/html/CAMERA.html) in real time. Following this pre-processing of the peak-table is performed by [MetMSLine](https://github.com/WMBEdmands/MetMSLine). Automatic PCA-based outlier detection is performed and a warning email sent to user(s) if a QC sample is outlying. Furthermore, automatic real-time univariate co-variate based statistical analysis is then performed. 
 
 ![example_PCA_Scores_Iteration_1+2](https://github.com/WMBEdmands/simExTargId/blob/master/inst/extdata/pcaOutId_scores_iter1_2.png)
-**Example PCA scores iterations 1 and 2 - averaged pooled Quality Control samples should cluster tightly near the origins of the first and second principal components**
+**Example PCA scores iterations 1 and 2** - averaged pooled Quality Control samples should cluster tightly near the origins of the first and second principal components
 
 The **simExTargId** workflow can be left running during the MS1-profiling data collection providing a degree of reassurance that serious instrumental difficulties will not go unnoticed (even whilst present in the laboratory and otherwise distracted) and also outlying samples and statistically relevant LC-MS feature targets can be identified and additional experiments/reinjections appended to the experimental worklist before the end.
+
+
+![example_peakMonitorEmail](https://github.com/WMBEdmands/simExTargId/blob/master/inst/extdata/examplePeakMonitorEmail.PNG)
+**Example signal attenuation warning email** - pooled quality controls can be used to monitor a database (.csv) of previously identified metabolites if a maximum percentage (>20%) of the monitored metabolites are greater than 20% attenuated (default can be altered by user) then a warning email is sent. The output of the `peakMonitor` function can be visualized in a shiny application.
+
 
 **SimExTargId** also attempts to inculcate a rigorous (and broadly accepted) experimental design and also a directory sub-structure for each experiment to help organize data and files for the user. Sub-directories, tables and plots are then generated in real time. For example, each time a new iteration of **simExTargId** takes place updated PCA plots and tables will appear in each sub-directory. The idea is to preserve the reproducibility by the recording of parameters used (and session information) and providing an easy to navigate and intuitive sub-directory structure.
 
