@@ -12,9 +12,12 @@ emailNotifier(rawDir = NULL, emailAddress = NULL, emailTime = 10,
 \item{rawDir}{character full path name of raw data directory into which raw data will
 eventually/ has already been started to be written.}
 
-\item{emailAddress}{character email address from and to which to send warning email
+\item{emailAddress}{character vector email address(es) from and to which to send warning email
 that run may have stopped. (if not supplied then email notification will not be sent)
-see \code{\link{sendmail}}.}
+see \code{\link{sendmail}}. The first email address in the character vector will
+be the email address which warning emails are sent from to all of the other
+email addresses supplied. N.B. Currently the email addresses must use the same SMTP
+server setting (e.g. all google mail, see mailControl argument below).}
 
 \item{emailTime}{numeric length of time (in minutes) after the last raw data
 file was written before an email notification will be sent. minimum value is 5 minutes.}
