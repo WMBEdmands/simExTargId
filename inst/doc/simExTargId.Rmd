@@ -2,7 +2,11 @@
 title: "simExTargId (simultaneous experiment - MS/MS target identification)"
 author: "WMB Edmands"
 date: '`r format(Sys.Date(), "%B %e, %Y")`'
-output: pdf_document
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{simExTargId}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 The following illustrates the simExTargId workflow with example (.RAW) data files of 
@@ -33,7 +37,7 @@ be closely monitored and any stoppage/error quickly detected.
 The `emailNotifier` function can send warning emails to a character vector of multiple
 email addresses (e.g. within a laboratory group) if an experimental run
 has stopped unexpectedly or if there are spray quality issues for example
-leading to files which are much smaller in size (default: >= 3 median absolute deviations) than the files already collected. If this function as part of the main **simExTargId** function 
+leading to files which are much smaller in size (default: >= 3 median absolute deviations) than the files already collected. If this function formed part of the main **simExTargId** function 
 there might be a delay in informing the user of an unexpected instrument stoppage or spray quality issues for example when file-conversion, peak-picking or another lengthy process is taking place.
 
 ```{r, eval=FALSE}
