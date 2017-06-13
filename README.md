@@ -1,5 +1,8 @@
-# simExTargId (v0.2.0)
-Performs simultaneous raw data to mzXML conversion ([MSConvert](http://proteowizard.sourceforge.net/)), peak-picking, retention time alignment, grouping ([xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html)), ESI adducts/in-source fragment artefact identification ([CAMERA](https://bioconductor.org/packages/release/bioc/html/CAMERA.html)), peak table output pre-processing, automatic outlier detection by PCA and automatic  statistical analysis dependent on co-variates supplied ([MetMSLine](https://github.com/WMBEdmands/MetMSLine)), signal drift monitoring and possible MS2 target list identification and real-time shiny-based visualizations are also available during a metabolomic profiling experiment. An email notification system using the [sendmailR](https://cran.r-project.org/web/packages/sendmailR/index.html)
+# simExTargId 
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.806838.svg)](https://doi.org/10.5281/zenodo.806838) Development version 0.2.1 archived on the Zenodo repository. 
+
+Performs simultaneous raw data to mzXML conversion ([MSConvert](http://proteowizard.sourceforge.net/)), peak-picking, retention time alignment, grouping ([xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html)), ESI adducts/in-source fragment artefact identification ([CAMERA](https://bioconductor.org/packages/release/bioc/html/CAMERA.html)), peak table output pre-processing, automatic outlier detection by PCA and automatic  statistical analysis dependent on co-variates supplied ([MetMSLine](https://github.com/WMBEdmands/MetMSLine)), signal drift monitoring and possible MS2 target list identification (with real-time shiny-based visualizations) during a metabolomic profiling experiment. An email notification system using the [sendmailR](https://cran.r-project.org/web/packages/sendmailR/index.html)
 package is implemented in **simExTargId** to warn the user(s) of instrumental stoppages and drift. The **simExTargId** package is still in active development but nevertheless should still be at a functional and useful stage for many metabolomic investigators.
 
 ## Installation
@@ -28,8 +31,12 @@ All peak-picking, retention time alignment and grouping is performed by [xcms](h
 
 The **simExTargId** workflow can be left running during the MS1-profiling data collection providing a degree of reassurance that serious instrumental difficulties will not go unnoticed (even whilst present in the laboratory and otherwise distracted) and also outlying samples and statistically relevant LC-MS feature targets can be identified and additional experiments/reinjections appended to the experimental worklist before the end.
 
-**SimExTargId** also attempts to inculcate a rigorous (and broadly accepted) experimental design and also a organizational directory sub-structure for an experiment, helping to organize data and files for the user. Sub-directories, tables and plots are then generated in real time. For example, each time a new iteration of **simExTargId** takes place updated PCA plots and tables will appear in each sub-directory. The idea is to preserve the reproducibility by the recording of parameters used (and session information) and providing an easy to navigate and intuitive sub-directory structure.
+**SimExTargId** also attempts to inculcate a rigorous (and broadly accepted) experimental design and also a directory sub-structure for each experiment to help organize data and files for the user. Sub-directories, tables and plots are then generated in real time. For example, each time a new iteration of **simExTargId** takes place updated PCA plots and tables will appear in each sub-directory. The idea is to preserve the reproducibility by the recording of parameters used (and session information) and providing an easy to navigate and intuitive sub-directory structure.
 
 A technical note describing the package is currently under-review and awaiting decision until then if you use *simExTargId* please cite the DOI provided by the Zenodo archive.
+
+Licence
+=============
+The **simExTargId** package is licenced under the GPLv3 (http://www.gnu.org/licenses/gpl.html).
 
  
