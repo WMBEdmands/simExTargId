@@ -5,7 +5,8 @@
 \title{email notification system for LC-MS analyses}
 \usage{
 emailNotifier(rawDir = NULL, emailAddress = NULL, emailTime = 10,
-  maxTime = 60, mailControl = list(smtpServer = "ASPMX.L.GOOGLE.COM"))
+  maxTime = 60, mailControl = list(smtpServer = "ASPMX.L.GOOGLE.COM"),
+  minFiles = 5, nMad = 3)
 }
 \arguments{
 \item{rawDir}{character full path name of raw data directory into which raw data will
@@ -18,8 +19,21 @@ see \code{\link{sendmail}}.}
 \item{emailTime}{numeric length of time (in minutes) after the last raw data
 file was written before an email notification will be sent. minimum value is 5 minutes.}
 
+\item{maxTime}{numeric the maximum time before the email notifier process will stop
+altogether so it does not continue ad infinitum and the eventual return of
+the cosmos to a state of maximum entropy (default = 60 mins).}
+
 \item{mailControl}{List of SMTP server settings see \code{\link{sendmail}} for details.
 Example given is for google mail.}
+
+\item{minFiles}{integer the minimum number of files that must be collected
+before the median absolute deviation is calculated (default = 5).}
+
+\item{nMad}{numeric the number of median absolute deviations smaller a file
+must be for an email warning to be sent (default = 3). Reducing this
+value may make it more sensitive to subtle reductions in file size but increase
+the risk of false positive warning email messages. Utilizes the base function
+\link{mad} in the stats package.}
 }
 \description{
 email notification system for LC-MS analyses

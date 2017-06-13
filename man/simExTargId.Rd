@@ -9,9 +9,9 @@ simExTargId(rawDir = NULL, studyName = "exampleStudyName",
   metab = NULL, minFiles = 10, centroid = TRUE, mzXml = TRUE,
   zeroFillValue = NULL, normMethod = NULL, manBatchAdj = NULL,
   LogTransBase = exp(1), smoothSpan = 0.8, cvThresh = 30, blankFC = 2,
-  replicates = FALSE, pAdjustMethod = "BH", bw = 2, mzwid = 0.015,
-  minfrac = 0.25, xcmsSetArgs = list(peakwidth = c(5, 20), ppm = 10,
-  snthresh = 5, method = "centWave"), pcaOutIdArgs = list(cv = "q2", scale =
+  replicates = FALSE, pAdjustMethod = "BH", xcmsSetArgs = list(peakwidth =
+  c(5, 20), ppm = 10, snthresh = 5, method = "centWave"), bw = 2,
+  mzwid = 0.015, minfrac = 0.25, pcaOutIdArgs = list(cv = "q2", scale =
   "pareto", centre = TRUE), peakMonitorArgs = list(ppm = 10, rtdev = 30,
   maxSignalAtt = 20, percBelow = 20), maxTime = 60, emailAddress = NULL,
   mailControl = list(smtpServer = "ASPMX.L.GOOGLE.COM"), minFeatPseudo = 2)
@@ -117,7 +117,7 @@ alignment, data pre-processing (\code{\link{zeroFill}}, \code{\link{logTrans}},
  statistical analysis and feature deconvolution (\code{\link{coVarStatType}},
   \code{\link{rtCorrClust}}). The data output of the workflow can be
   visualized by a shiny application (\code{\link{shiny}}) at any time
-  (\code{\link{targIdShiny}}) and MSn fragmentation targets rapidly identified.
+  (\code{\link{targetId}}) and MS2 fragmentation targets rapidly identified.
 
  The function works according to the following process:
 
@@ -136,6 +136,7 @@ alignment, data pre-processing (\code{\link{zeroFill}}, \code{\link{logTrans}},
  in this column for Good Laboratory Practice (GLP) and ideal
  metabolomic experimental design. The only mandatory injection/run type name
  is "sample" (not case-sensitive), simExTargId will stop if this is not found in the second column.
+
  This will direct simExTargId to perform statistical analysis on samples only for which
  co-variates are available in columns 3 -  total number of columns.
   In order to use the full functionality of simExTargId it is also suggested that
@@ -150,7 +151,7 @@ alignment, data pre-processing (\code{\link{zeroFill}}, \code{\link{logTrans}},
  supplied.
 
  In order to distinguish a column conditioning QC from a regular QC sample
- the suffix "cc" should be added to the name "QC". If a QC is not used for
+ the prefix "cc" should be added to the name "QC". If a QC is not used for
  column conditioning then just "cc" (not case-sensitive) is sufficient. These
  will not be monitored by the peakMonitor of pcaOutId functions.
 
