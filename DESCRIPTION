@@ -19,7 +19,7 @@ Imports:
 	fastcluster (>= 1.1.22),
 	foreach (>= 1.4.3),
 	doSNOW (>= 1.0.14)
-#Suggests: MSconvert (>= ProteoWizard release: 3.0.7162 (2015-2-5))
 License: GPL (>= 2)
 LazyData: true
+VignetteBuilder: knitr
 RoxygenNote: 6.0.1

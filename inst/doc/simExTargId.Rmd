@@ -2,23 +2,24 @@
 title: "simExTargId (simultaneous experiment - MS/MS target identification)"
 author: "WMB Edmands"
 date: '`r format(Sys.Date(), "%B %e, %Y")`'
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{simExTargId}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+output: pdf_document
 ---
 
-The following illustrates the simExTargId works with example (.RAW) data files of 
-human plasma obtained on a Thermo FT-ICR-MS:
+The following illustrates the simExTargId workflow with example (.RAW) data files of 
+human plasma obtained on a Thermo FT-ICR-MS.
 
-It shows how to set up the early warning email notification process first to
-monitor a dummy raw data directory on your computer's hard drive. Then
-half the example .RAW data files can be moved to the dummy raw data directory
-to initiate the **simExTargId** autonomous metabolomic data-analysis process.
-Then another set of example .RAW data files can then be moved in to the raw data
-directory to simulate a real-time collection of LC-MS data on a mass spectrometer
-workstation.
+First the warning email notification function (*emailNotifier*) must be initiated
+in a seperate R session to monitor the raw data directory on the mass spectrometer workstation. 
+
+For the purposes of this vignette the main function (*simExTargId*) can be
+illustrated by simulating a real-time data acquisition worklist. First a dummy 
+raw data directory must be created on your computer's hard drive into which example raw 
+data files can be moved. After moving the raw data files in to the directory 
+their last write time can be adjusted (*Sys.setFileTime*) to initiate the 
+**simExTargId** autonomous metabolomic data-analysis process. This allows the full
+functionality of **simExTargId** to be demonstrated with example data rather
+than when needed for a metabolomic profiling data collection.
+
 
 ```{r, include=F}
 library(simExTargId)
@@ -26,14 +27,14 @@ library(simExTargId)
 
 # 1. Set the real-time email notifier
 
-The email notifier must be run as a seperate monitoring function in another R session.
-This is so that the raw data directory on the mass spectrometer workstation can 
-be closely monitored and a stoppage in the run or any files which are much smaller
-in size (greater than 3 * median absolute deviation) than the majority of the files
-can be immediately identified and a warning email sent. If this function was run
-from within the main **simExTargId** function there might be a delay in informing the
-user of an unexpected instrument stoppage or spray quality issues for example when file-conversion,
-peak-picking or another lengthy process is taking place.
+The email notifier must be run in a seperate R session to ensure
+the raw data directory on the mass spectrometer workstation can 
+be closely monitored and any stoppage/error quickly detected.
+The `emailNotifier` function can send warning emails to a character vector of multiple
+email addresses (e.g. within a laboratory group) if an experimental run
+has stopped unexpectedly or if there are spray quality issues for example
+leading to files which are much smaller in size (default: >= 3 median absolute deviations) than the files already collected. If this function as part of the main **simExTargId** function 
+there might be a delay in informing the user of an unexpected instrument stoppage or spray quality issues for example when file-conversion, peak-picking or another lengthy process is taking place.
 
 ```{r, eval=FALSE}
 # select directory where example directories for raw files can be created and also results
@@ -53,8 +54,29 @@ emailNotifier(rawDir=dummyRawDir, emailAddress='johndoe@emailprovider.com',
 
 # 2. Set the main simExTargId function running
 
-Set the main **simExTargId** function running in a different R session to the 
-**emailNotifier** function. Make sure that you have the **MSConvert** software
+Set the main `simExTargId` function running in a different R session to the 
+`emailNotifier` function. This function is essentially a giant wrapper function
+for a multitude of other R packages and softwares and utilizes a while loop to continually
+monitor the raw data directory on the mass spectrometer computer until
+the last data file acquired is beyond a maximum waiting time (see maxTime argument).
+The function automatically generates a recommended and organized sub-directory structure
+in to which all output from `simExTargId` is continually saved.
+
+A co-variates/worklist table supplied at initiation will inform both the 
+xcms sub-directory grouping, the pooled QC-based signal adjustment and CV% filtering,
+PCA analysis and also the automatic statistical analysis.
+
+As new data files are collected they will be automatically converted to the mzXML
+open file format (MSConvert, ProteoWizard) and peak-picked (`xcmsSet`). After a minimum number
+of files has been collected subsequent stages of retention time alignment (`retcor.obiwarp`),
+grouping (`xcms::group`) and missing peak imputation (`xcms::fillPeaks`). Following
+xcms CAMERA identifies pseudospectra, isotopes and ESI adducts/in-source fragments.
+The resulting peak table is then pre-processed, outliers identified by PCA and
+finally automatic co-variate based statistical analysis is performed using various
+functions from the MetMSLine package. A function peakMonitor internal to the simExTargId
+function is able to monitor signal-drift/attenuation of a database (.csv) of previously identified metabolites supplied at initiation.
+
+**N.B.** Make sure that you have the **MSConvert** software
 in your path if using Windows and that you are able to successfully run the 
 command `> MSConvert` in your system shell. This is necessary for the automatic 
 mzXML/mzML file conversion process and **simExTargId** will not work successfully
@@ -106,7 +128,7 @@ simExTargId(rawDir=dummyRawDir, studyName = studyName, analysisDir='C:/',
 ```
 
 simExTargId will wait until at least five minutes after the raw data file was
-last modified, to ensure that the file acquisition has completed.
+last modified, to ensure that the file acquisition has fully completed.
 
 After at least 3 samples of each class found in the second column of the
 co-variates table, retention time alignment, grouping, zero-filling, then
@@ -115,14 +137,14 @@ pre-processing, PCA analysis, stats analysis and data-deconvolution will occur.
 # 3. peakMonitor (shiny application)
 A database table of previously identified metabolites can be monitored in real-time
 and analytical CV% and signal attenuation affects monitored using the shiny
-application **peakMonitor**
+application `peakMonitor`
 ```{r, eval=FALSE}
 peakMonitor(analysisDir=paste0(dummyRawDir, "_analysis/NEG/output/peakMonitor"))
 ```
 
 # 4. targetId (shiny application)
 During a run the output of the statistical analyses can be viewed using the 
-shiny application **targetId** a zip file containing containing a .csv file for 
+shiny application `targetId` a zip file containing containing a .csv file for 
 each statistical test after setting the thresholds can be downloaded and used 
 to guide and plan further MS/MS experiments.
 
