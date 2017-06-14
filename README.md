@@ -27,7 +27,7 @@ Instrumental drifts and potentially MS2 targets can be identified in real time u
 
 Narrowing the temporal gap to truly "online" target feature MS2 fragmentation is also a primary goal of **simExTargId**. 
 
-All peak-picking, retention time alignment and grouping is performed by [xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html), then ESI adducts and isotopes detected by [CAMERA](https://bioconductor.org/packages/release/bioc/html/CAMERA.html) in real time. Following this pre-processing of the peak-table is performed by [MetMSLine](https://github.com/WMBEdmands/MetMSLine). Automatic PCA-based outlier detection is performed and a warning email sent to user(s) if a QC sample is outlying. Furthermore, automatic real-time univariate co-variate based statistical analysis is then performed. 
+All peak-picking, retention time alignment and grouping is performed by [xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html), then ESI adducts and isotopes are detected by [CAMERA](https://bioconductor.org/packages/release/bioc/html/CAMERA.html) in real time. Following this pre-processing of the peak-table is performed by [MetMSLine](https://github.com/WMBEdmands/MetMSLine). Automatic PCA-based outlier detection is performed and a warning email sent to user(s) if a QC sample is outlying. Furthermore, automatic real-time univariate co-variate based statistical analysis is then performed. 
 
 ![example_PCA_Scores_Iteration_1+2](https://github.com/WMBEdmands/simExTargId/blob/master/inst/extdata/pcaOutId_scores_iter1_2.png)
 **Example PCA scores iterations 1 and 2** - averaged pooled Quality Control samples should cluster tightly near the origins of the first and second principal components
