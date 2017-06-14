@@ -38,7 +38,7 @@ The *simExTargId* workflow can be left running during the MS1-profiling data col
 
 ![example_peakMonitorEmail](https://github.com/WMBEdmands/simExTargId/blob/master/inst/extdata/examplePeakMonitorEmail.PNG)
 
-**Example signal attenuation warning email** - pooled quality controls can be used to monitor a database (.csv) of previously identified metabolites if a maximum percentage (>20%) of the monitored metabolites are greater than 20% attenuated (default can be altered by user) then a warning email is sent. The output of the `peakMonitor` function can be visualized in a shiny application.
+**Example signal attenuation warning email** - pooled quality controls can be used to monitor a database (.csv) of previously identified metabolites if a maximum percentage (>20%) of the monitored metabolites are greater than 20% attenuated (these defaults can be altered by user) then a warning email is sent. The output of the `peakMonitor` function can be visualized in a shiny application.
 
 ******
 *SimExTargId* also attempts to inculcate a rigorous (and broadly accepted) experimental design and also a directory sub-structure for each experiment to help organize data and files for the user. Sub-directories, tables and plots are then generated in real time. For example, each time a new iteration of *simExTargId* takes place updated PCA plots and tables will appear in each sub-directory. The idea is to preserve the reproducibility by the recording of parameters used (and session information) and providing an easy to navigate and intuitive sub-directory structure.
