@@ -7,7 +7,7 @@ package is implemented in *simExTargId* to warn the user(s) of instrumental stop
 
 Installation
 ===============
-Install the latest development version and all package dependencies in one-line of code directly from GitHub using the devtools package. First ensure devtools is installed, instructions can be found here: https://github.com/hadley/devtools
+The latest development version and all package dependencies can be installed with one-line of code directly from GitHub using the devtools package. First ensure devtools is installed, instructions can be found here: https://github.com/hadley/devtools
 ```{r}
 devtools::install_github('WMBEdmands/simExTargId', dependencies=c("Depends", "Imports", "Suggests"))
 ```
