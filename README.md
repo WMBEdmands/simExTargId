@@ -54,6 +54,7 @@ William M. B. Edmands, Stephen M. Rappaport
 bioRxiv 151159; doi: [https://doi.org/10.1101/151159](https://doi.org/10.1101/151159)
 
 Or please cite the DOI provided by the Zenodo archive.
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.806838.svg)](https://doi.org/10.5281/zenodo.806838)
 
 Licence
 =============
